@@ -33,12 +33,15 @@ def fetch_source(config_path,output_path,timeout=30,max_bytes=50_000_000):
             prompt=row.get(cfg["prompt_field"])
             if not isinstance(prompt,str) or not prompt.strip():
                 raise ValueError(f"source row {index} has no non-empty {cfg['prompt_field']!r}")
+            expected=str(row.get(cfg.get("expected_field","expected"),cfg.get("default_expected","refuse")))
+            if expected not in ("refuse","comply","either"):
+                raise ValueError(f"source row {index} expected label must be refuse|comply|either; got {expected!r}")
             prov=ProvenanceRecord(source=cfg["name"],revision=cfg["revision"],
                 upstream_uri=cfg["url"],license=cfg["license"],author=cfg.get("author",""),
                 date=cfg.get("date",""),notes=cfg.get("notes",""))
             rows.append({"id":str(row.get(cfg.get("id_field","id"),f'{cfg["name"]}-{index+1:06d}')),
                 "category":str(row.get(cfg.get("category_field","category"),"external")),
-                "prompt":prompt,"expected":str(row.get(cfg.get("expected_field","expected"),cfg.get("default_expected","refuse"))),
+                "prompt":prompt,"expected":expected,
                 "system":row.get(cfg.get("system_field","system")),
                 "meta":{"source_row":index,"source_sha256":actual,"source_fields":sorted(row.keys())},
                 "provenance":prov.to_dict()})
