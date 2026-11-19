@@ -14,8 +14,11 @@ def main(argv=None):
     parser.add_argument("--endpoint",required=True)
     parser.add_argument("--token-env",default="OMJB_GUARDRAIL_TOKEN")
     parser.add_argument("--trace",default="mutation-trace.jsonl")
-    parser.add_argument("--estimated-request-cost",type=float,default=0.0)
+    parser.add_argument("--estimated-request-cost",type=float,required=True,\n                        help="conservative per-request USD upper bound; pass 0 explicitly only for a free/local endpoint")
     args=parser.parse_args(argv)
+    import math
+    if not math.isfinite(args.estimated_request_cost) or args.estimated_request_cost<0:
+        parser.error("--estimated-request-cost must be finite and non-negative")
     probes=load_probes(args.corpus)
     matches=[p for p in probes if p.id==args.probe_id]
     if len(matches)!=1:
