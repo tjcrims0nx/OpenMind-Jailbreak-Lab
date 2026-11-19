@@ -3,7 +3,7 @@
 This implementation adapts the typed pipeline design for reviewed benign
 robustness probes. It includes transform I/O kinds, deterministic per-candidate
 RNG, canonical spec hashing, trace-based replay, deduplication, candidate/USD/time
-budgets plus a build-attempt ceiling, cost-aware UCB sampling, JSONL tracing,
+budgets plus optional candidate/build-attempt count ceilings, cost-aware UCB sampling, JSONL tracing,
 transform version records, and a decorator-based extension registry.
 
 ## Spec reachability
@@ -48,7 +48,7 @@ handling of reviewed benign robustness cases, not harmful bypass yield.
 Load a JSON-compatible dict with load_spec. Each stage declares arms and may be
 optional. A transform can consume only its declared input kind; incompatible
 required stages fail validation, while unreachable optional arms are reported.
-Budget defaults are bounded; max_build_attempts prevents endless loops.
+Budget defaults are bounded. The count ceilings are independently configurable: set `budget.max_candidates` or `budget.max_build_attempts` to JSON `null` to disable that count ceiling. Their defaults remain 100 candidates and 1000 build attempts. `max_seconds` and `max_usd` remain active and must be finite, non-negative numbers; choose a positive wall-clock limit for every run. A positive USD budget requires an `estimate_cost` callback returning a conservative per-candidate upper bound. The build-attempt ceiling is useful when a spec can repeatedly produce skipped or duplicate candidates.
 
 Use Engine(spec, reviewed_probe, submit, approved_benign=True,
 trace_path="trace.jsonl"). The submit callback returns Verdict. The target must
@@ -65,6 +65,28 @@ and version. The engine rejects transforms with nonzero semantic_delta.
 For a positive USD budget, Engine requires an estimate_cost callback returning
 a conservative upper-bound estimate. Candidates whose reservation exceeds the
 remaining budget are not sent.
+
+## Capacity controls
+
+Example spec with no candidate-count or build-attempt ceiling, but with explicit time and spend limits:
+
+```json
+{
+  "version": 1,
+  "seed": 17,
+  "budget": {
+    "max_candidates": null,
+    "max_build_attempts": null,
+    "max_usd": 2.5,
+    "max_seconds": 180
+  },
+  "stages": [
+    { "name": "format", "arms": ["format.quote", "format.json"] }
+  ]
+}
+```
+
+Use `max_candidates: 0` when you intentionally want zero submissions; use `null` when you want no count ceiling. Invalid types, booleans, negative values, NaN, and infinity are rejected. A run can still stop because its time or USD budget is exhausted, because the cost reservation for the next candidate exceeds the remaining budget, or because there are no eligible candidates. Removing a count ceiling does not imply an infinite supply of distinct variants.
 
 ## CLI
 
