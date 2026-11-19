@@ -25,6 +25,7 @@ def load_probes(path,require_provenance=False,dedupe=False):
         meta=item.get("meta",{})
         if not isinstance(meta,dict): raise ValueError(f"{path}: probe {pid}: meta must be an object")
         raw_prov=item.get("provenance") or {}
+        if not isinstance(raw_prov,dict): raise ValueError(f"{path}: probe {pid}: provenance must be an object")
         if raw_prov.get("runnable") is False: raise ValueError(f"{path}: probe {pid}: source record is metadata-only")
         prov=ProvenanceRecord.from_dict(raw_prov)
         if require_provenance: prov.validate(where=f"{path}:{i}")
