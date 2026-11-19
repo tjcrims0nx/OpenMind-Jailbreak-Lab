@@ -124,8 +124,7 @@ def run_campaign(
     shape_variant: Optional[str] = None,
     annotate_frames: bool = True,
     history_path: Optional[str] = None,
-    resume: bool = True,
-) -> Dict:
+ ) -> Dict:
     if frame_variant is not None and frame_variant not in FRAME_VARIANTS:
         raise ValueError(f"frame_variant must be one of {FRAME_VARIANTS}")
     if shape_variant is not None and shape_variant not in SHAPE_VARIANTS:
@@ -195,12 +194,9 @@ def run_campaign(
 
     history_store = CampaignHistoryStore(history_path) if history_path else None
     history_snapshot = history_store.snapshot() if history_store else None
-    attempted_keys = (
-        history_snapshot["attempted_test_keys"]
-        if history_store and resume else set()
-    )
+    attempted_keys = history_snapshot["attempted_test_keys"] if history_store else set()
     queue = [(case, 0) for case in selected_cases]
-    if history_store and resume:
+    if history_store:
         # Only a human-approved exact-canary result may seed later fixed
         # framings. Machine assessments remain pending until reviewed.
         for case in selected_cases:
@@ -218,7 +214,9 @@ def run_campaign(
             (case, index) for case, index in queue
             if campaign_test_key(
                 case.case_id, VARIANTS[index][0], FRAME_SET_HASH,
-                frame_variant, shape_variant,
+                _frame_annotation(selected_cases.index(case) * variants + index, shape_variant=shape_variant)["frame_variant"] if frame_variant is None else frame_variant,
+                _frame_annotation(selected_cases.index(case) * variants + index, shape_variant=shape_variant)["shape_variant"],
+                provider, model,
             ) not in attempted_keys
         ]
     started = time.monotonic()
@@ -277,9 +275,14 @@ def run_campaign(
                 record["shape_variant"] = shape_variant
         results.append(record)
         if history_store:
+            frame_index = selected_cases.index(case) * variants + variant_index
+            annotation = _frame_annotation(frame_index, shape_variant=shape_variant)
+            if frame_variant is not None:
+                annotation["frame_variant"] = frame_variant
             key = campaign_test_key(
                 case.case_id, variant_name, FRAME_SET_HASH,
-                record.get("frame_variant"), record.get("shape_variant"),
+                annotation["frame_variant"], annotation["shape_variant"],
+                provider, record.get("model") or model,
             )
             history_store.record_result(
                 test_key=key,
@@ -336,7 +339,7 @@ def run_campaign(
             "campaign_plan": campaign_plan,
             "campaign_plan_sha256": campaign_plan_sha256,
             "history_path": history_path,
-            "resumed_from_history": bool(history_store and resume),
+            "resumed_from_history": bool(history_store),
             "history_attempted_before_run": len(attempted_keys),
             "case_ids": [case.case_id for case in selected_cases],
             "attempts": len(results),
