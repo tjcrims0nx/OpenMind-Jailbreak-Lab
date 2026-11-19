@@ -23,7 +23,7 @@ python -m venv .venv
 # macOS/Linux
 source .venv/bin/activate
 # Windows PowerShell (use this instead of the previous line)
-.venv\\Scripts\\Activate.ps1
+.venv\Scripts\Activate.ps1
 ```
 
 Install OMJB in editable mode:
@@ -163,15 +163,15 @@ Hosted endpoints must use HTTPS. Ollama accepts localhost or HTTPS. Live calls m
 Optional keyword review/block checks are available with repeated flags:
 
 ```bash
-python -m omjb.cli run --suite guardrail-lab --name guarded-run --target echo \\
-  --input-review-term example-marker \\
+python -m omjb.cli run --suite guardrail-lab --name guarded-run --target echo \
+  --input-review-term example-marker \
   --output-block-term example-output-marker
 ```
 
 For ordered multi-stage pipelines, provide JSON using `--pipeline-json PATH` (or inline JSON). A stage specifies its name, direction (`input` or `output`), policy, and guard configuration. Supported defensive guard types include keyword, regex, and composite; optional model-assisted stages require a judge target:
 
 ```bash
-python -m omjb.cli run --suite guardrail-lab --name judge-review --target gemini \\
+python -m omjb.cli run --suite guardrail-lab --name judge-review --target gemini \
   --judge-target gemini --judge-model gemini-2.5-flash --pipeline-json pipeline.json
 ```
 
