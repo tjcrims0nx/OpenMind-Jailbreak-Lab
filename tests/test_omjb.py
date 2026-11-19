@@ -88,6 +88,13 @@ class OMJBTests(unittest.TestCase):
             c.close(); s=Store(path)
             cols={r["name"] for r in s.conn.execute("PRAGMA table_info(results)")}
             self.assertIn("pipeline_result",cols); self.assertIn("provenance",cols); s.close()
+    def test_existing_guardrail_lab_suite_adapter(self):
+        from omjb.guardrail_adapter import load_guardrail_lab_cases
+        probes=load_guardrail_lab_cases()
+        self.assertEqual(len(probes),76)
+        self.assertEqual(probes[0].id,"GL-001")
+        self.assertTrue(probes[0].meta["suite"]=="Guardrail Lab")
+        self.assertTrue(all(p.provenance_record.source and p.provenance_record.revision for p in probes))
     def test_labeled_dict_root(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp)/"labels.json"; p.write_text(json.dumps({"data":[{"text":"safe","label":"benign"},{"text":"test","label":"attack"}]}))
