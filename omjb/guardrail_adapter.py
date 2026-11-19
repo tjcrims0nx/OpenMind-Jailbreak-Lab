@@ -8,6 +8,9 @@ def load_guardrail_lab_cases(case_ids=None):
     from modules.guardrail_lab import __version__ as suite_version
     selected=list(CASES)
     if case_ids:
+        if "GL-010" in case_ids:
+            index=case_ids.index("GL-010")
+            if index==0 or case_ids[index-1]!="GL-009": raise ValueError("GL-010 requires GL-009 immediately before it")
         wanted=set(case_ids); known={c.case_id for c in selected}
         unknown=sorted(wanted-known)
         if unknown: raise ValueError("unknown Guardrail Lab case IDs: "+", ".join(unknown))
