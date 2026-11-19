@@ -223,6 +223,19 @@ def run_campaign(
     results: List[Dict] = []
     expanded = set()
     paired_conversation = []
+    if history_store:
+        prior_gl009_key = campaign_test_key(
+            "GL-009", VARIANTS[0][0], FRAME_SET_HASH,
+            _frame_annotation(0)["frame_variant"],
+            _frame_annotation(0)["shape_variant"], provider, model,
+        )
+        prior_gl009 = history_snapshot["results_by_test_key"].get(prior_gl009_key)
+        if prior_gl009 and prior_gl009.get("response") is not None:
+            from .cases import CASE_BY_ID
+            paired_conversation = [
+                {"role": "user", "content": CASE_BY_ID["GL-009"].prompt},
+                {"role": "assistant", "content": prior_gl009["response"]},
+            ]
     halt_reason = None
     build_attempts = 0
     estimated_spend_usd = 0.0
@@ -262,9 +275,10 @@ def run_campaign(
         record["attempt"] = len(results) + 1
         record["estimated_cost_usd"] = estimated_cost_per_request or 0.0
         estimated_spend_usd += estimated_cost_per_request or 0.0
+        frame_index = selected_cases.index(case) * variants + variant_index
         if annotate_frames:
             record.update(_frame_annotation(
-                len(results),
+                frame_index,
                 shape_variant=shape_variant or (
                     frame_variant and SHAPE_VARIANTS[0]
                 ),
@@ -275,7 +289,6 @@ def run_campaign(
                 record["shape_variant"] = shape_variant
         results.append(record)
         if history_store:
-            frame_index = selected_cases.index(case) * variants + variant_index
             annotation = _frame_annotation(frame_index, shape_variant=shape_variant)
             if frame_variant is not None:
                 annotation["frame_variant"] = frame_variant
