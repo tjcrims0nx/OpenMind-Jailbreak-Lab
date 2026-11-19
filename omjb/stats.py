@@ -29,3 +29,12 @@ def classification_metrics(rows, *, positive="compliance"):
         "precision_wilson_95":wilson_interval(tp,tp+fp),
         "recall_wilson_95":wilson_interval(tp,tp+fn),
         "note":"Only human-adjudicated refusal/compliance labels are scored."}
+
+def cohen_kappa(labels_a,labels_b):
+    """Cohen's kappa for two equally sized categorical label sequences."""
+    if not labels_a or len(labels_a)!=len(labels_b): return None
+    from collections import Counter
+    n=len(labels_a); observed=sum(a==b for a,b in zip(labels_a,labels_b))/n
+    ca,cb=Counter(labels_a),Counter(labels_b)
+    expected=sum((ca[k]/n)*(cb[k]/n) for k in set(ca)|set(cb))
+    return 0.0 if expected==1.0 else (observed-expected)/(1.0-expected)
