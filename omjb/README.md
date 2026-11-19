@@ -1,5 +1,7 @@
 # OMJB: OpenMind evaluation harness
 
+**New here?** Start with the [OMJB installation and operator guide](INSTALLATION.md) for setup, provider credentials, corpus loading, pipelines, adjudication, and export workflows.
+
 OMJB is an additive, provider-neutral evaluation package. It does not replace the repository's Guardrail Lab, 76-case suite, benchmark, scanner, original-source metadata browser, or manual-review workspace.
 
 ## Install and run
