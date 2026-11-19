@@ -35,32 +35,40 @@ def ensure_schema(store):
 
 def persist_evaluation(store, samples, guard, run_name, observations, config=None):
     ensure_schema(store)
+    if len(samples)!=len(observations):
+        raise ValueError("sample and observation counts do not match")
+    started=time.time()
     cur=store.conn.execute(
-        "INSERT INTO guard_eval_runs(name,guard_name,config,started_at,finished_at) VALUES(?,?,?,?,?)",
+        "INSERT INTO guard_eval_runs(name,guard_name,config,started_at,finished_at) VALUES(?,?,?,?,NULL)",
         (run_name, getattr(guard,"name",guard.__class__.__name__),
-         json.dumps(config or {},sort_keys=True),time.time(),time.time()))
+         json.dumps(config or {},sort_keys=True),started))
     run_id=cur.lastrowid
-    for index,(sample,observation) in enumerate(zip(samples,observations)):
-        findings=getattr(observation,"findings",None)
-        if findings is None:
-            findings=[observation]
-        serialized=[]
-        for finding in findings:
-            if is_dataclass(finding):
-                serialized.append(asdict(finding))
-            elif hasattr(finding,"__dict__"):
-                serialized.append(dict(finding.__dict__))
-            else:
-                serialized.append(finding)
-        store.conn.execute(
-            """INSERT INTO guard_eval_results
-            (run_id,sample_id,category,text,expected_label,decision,findings,provenance,created_at)
-            VALUES(?,?,?,?,?,?,?,?,?)""",
-            (run_id,str(sample.get("id",f"sample-{index+1:04d}")),
-             sample.get("category","uncategorized"),sample["text"],sample["label"],
-             observation.decision,json.dumps(serialized,sort_keys=True),
-             json.dumps(sample.get("provenance",{}),sort_keys=True),time.time()))
-    store.conn.commit()
+    try:
+        for index,(sample,observation) in enumerate(zip(samples,observations)):
+            findings=getattr(observation,"findings",None)
+            if findings is None:
+                findings=[observation]
+            serialized=[]
+            for finding in findings:
+                if is_dataclass(finding):
+                    serialized.append(asdict(finding))
+                elif hasattr(finding,"__dict__"):
+                    serialized.append(dict(finding.__dict__))
+                else:
+                    serialized.append(finding)
+            store.conn.execute(
+                """INSERT INTO guard_eval_results
+                (run_id,sample_id,category,text,expected_label,decision,findings,provenance,created_at)
+                VALUES(?,?,?,?,?,?,?,?,?)""",
+                (run_id,str(sample.get("id",f"sample-{index+1:04d}")),
+                 sample.get("category","uncategorized"),sample["text"],sample["label"],
+                 observation.decision,json.dumps(serialized,sort_keys=True),
+                 json.dumps(sample.get("provenance",{}),sort_keys=True),time.time()))
+        store.conn.execute("UPDATE guard_eval_runs SET finished_at=? WHERE id=?",(time.time(),run_id))
+        store.conn.commit()
+    except Exception:
+        store.conn.rollback()
+        raise
     return run_id
 
 def pending(store, run_id, reviewer=""):
