@@ -14,7 +14,8 @@ def main(argv=None):
     parser.add_argument("--endpoint",required=True)
     parser.add_argument("--token-env",default="OMJB_GUARDRAIL_TOKEN")
     parser.add_argument("--trace",default="mutation-trace.jsonl")
-    parser.add_argument("--estimated-request-cost",type=float,required=True,\n                        help="conservative per-request USD upper bound; pass 0 explicitly only for a free/local endpoint")
+    parser.add_argument("--estimated-request-cost",type=float,required=True,
+                        help="conservative per-request USD upper bound; pass 0 explicitly only for a free/local endpoint")
     args=parser.parse_args(argv)
     import math
     if not math.isfinite(args.estimated_request_cost) or args.estimated_request_cost<0:
