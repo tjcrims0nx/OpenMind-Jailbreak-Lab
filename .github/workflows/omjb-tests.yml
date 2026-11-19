@@ -16,6 +16,7 @@ on:
       - "omjb/**"
       - "tests/test_omjb.py"
       - "tests/test_guard_review.py"
+      - "tests/test_downloaders.py"
       - "corpus/omjb_probes.json"
       - "pyproject.toml"
       - ".github/workflows/omjb-tests.yml"
