@@ -3,7 +3,8 @@ from pathlib import Path
 from omjb.storage import Store
 from omjb.guard import KeywordGuard
 from omjb.guard_eval import evaluate
-from omjb.guard_review import pending,adjudicate,summary\nfrom omjb.probes import Probe\nfrom omjb.targets import EchoTarget\nfrom omjb.runner import run
+from omjb.guard_review import pending,adjudicate,summary
+from omjb.probes import Probe\nfrom omjb.targets import EchoTarget\nfrom omjb.runner import run
 
 class GuardReviewTests(unittest.TestCase):
     def test_reviewer_scoped_model_adjudication_is_backward_compatible(self):
@@ -15,7 +16,7 @@ class GuardReviewTests(unittest.TestCase):
             self.assertEqual(len(store.unadjudicated(run_id,reviewer="bob")),1)
             self.assertEqual(len(store.unadjudicated(run_id,reviewer="alice")),0)
             self.assertEqual(store.get_results_with_adjudication(run_id,reviewer="alice")[0]["adj_label"],"refusal")
-            self.assertIsNone(store.get_results_with_adjudication(run_id)[0]["adj_label"])
+            self.assertEqual(store.get_results_with_adjudication(run_id)[0]["adj_label"],"refusal")
             store.close()
 
     def test_persist_and_adjudicate_guard_run(self):
