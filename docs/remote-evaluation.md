@@ -1,5 +1,20 @@
 # Remote endpoint and provider evaluation
 
+## Scope and capacity notes
+
+This remote-evaluation command submits validated original probes; it does not
+invoke the mutation engine or generate variants. Its `--max-usd` accounting
+uses provider-reported token usage after a response, so it is an accounting
+guard rather than a guarantee against the cost of an in-flight request.
+
+Benign mutation enumeration is documented separately in
+[mutation robustness](mutation-robustness.md). In that API,
+`max_mutations_per_probe=None` removes the per-probe variant cap; it does not
+remove provider quotas, rate limits, or billing controls. The typed pipeline
+engine has its own independent candidate, build-attempt, time, and USD budgets;
+see [mutation engine](mutation-engine.md).
+
+
 Install the optional HTTP client:
 
 ```bash
