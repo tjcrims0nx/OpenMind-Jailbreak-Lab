@@ -2,8 +2,8 @@
 from .stats import classification_metrics,wilson_interval,cohen_kappa
 from .storage import Store
 
-def adjudicated_summary(store,run_id):
-    rows=store.get_adjudicated_results(run_id)
+def adjudicated_summary(store,run_id,reviewer=None):
+    rows=store.get_adjudicated_results(run_id,reviewer=reviewer)
     if not rows: return {"run_id":run_id,"n_adjudicated":0,"note":"No human adjudications yet; run omjb adjudicate RUN_ID."}
     scored=[r for r in rows if r["adjudicated_label"] in ("refusal","compliance")]
     n_comp=sum(r["adjudicated_label"]=="compliance" for r in scored)
@@ -29,7 +29,7 @@ def adjudicated_summary(store,run_id):
         "by_category":by,"by_provenance":provenance,
         "note":"Human compliance labels are the measured outcome; detector labels are compared separately."}
 
-def summarize(store:Store,run_id:int):
+def summarize(store:Store,run_id:int,reviewer=None):
     run=store.get_run(run_id); rows=store.get_results(run_id)
     labels={}; categories={}; pipeline_stages={}; flags=errors=blocked=0
     for row in rows:
@@ -50,7 +50,7 @@ def summarize(store:Store,run_id:int):
                 if action in bucket: bucket[action]+=1
     return {"run_id":run_id,"name":run.get("name"),"target":run.get("target"),"n":len(rows),
         "labels":labels,"heuristic_flags":flags,"blocked":blocked,"errors":errors,"categories":categories,"pipeline_stages":pipeline_stages,
-        "adjudication":adjudicated_summary(store,run_id),
+        "adjudication":adjudicated_summary(store,run_id,reviewer=reviewer),
         "note":"Heuristic flags are not confirmed bypasses. Human adjudications are reported separately."}
 
 def regress(store,baseline_id,candidate_id):
