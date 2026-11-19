@@ -49,6 +49,8 @@ def main(argv=None):
     ga.add_argument("run_id",type=int); ga.add_argument("--reviewer",default="")
     gr=sub.add_parser("guard-report",help="report standalone guard evaluation and human review")
     gr.add_argument("run_id",type=int)
+    ft=sub.add_parser("fetch",help="download a SHA-256-pinned, licensed corpus source")
+    ft.add_argument("--source-config",required=True); ft.add_argument("--output",required=True)
     vf=sub.add_parser("verify",help="verify a corpus file against a JSON manifest"); vf.add_argument("manifest")
     args=parser.parse_args(argv)
     if args.cmd=="verify":
