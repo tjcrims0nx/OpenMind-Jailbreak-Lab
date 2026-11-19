@@ -166,6 +166,26 @@ For an offline demonstration: `python -m modules.guardrail_lab.demo --output rep
 OpenMind is experimental software, not a certification. Provider behavior changes and not every configuration has been live-tested. Check [release status](RELEASE_STATUS.md) for CI and release gates, and [LICENSE](LICENSE) for terms.
 
 
+### Install the OMJB package
+
+The integrated OMJB harness is included in this repository. From the repository root, Python 3.10+ is required:
+
+```bash
+python -m venv .venv
+# macOS/Linux: source .venv/bin/activate
+# Windows PowerShell: .venv\\Scripts\\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e .
+# Optional YAML corpus support:
+python -m pip install -e '.[yaml]'
+
+python -m unittest discover -s tests -p 'test_omjb.py' -v
+python -m omjb.cli list
+python -m omjb.cli run --suite guardrail-lab --case GL-001 --name smoke --target echo
+```
+
+The core package has no runtime dependencies; JSON/JSONL work out of the box. Installing with `pip install -e .` adds the `omjb` command. For provider setup, corpus formats, pipelines, provenance, adjudication, and export examples, see the [OMJB installation guide](omjb/INSTALLATION.md) and [OMJB reference](omjb/README.md). Keep provider keys in environment variables or GitHub Actions secrets—never in source files.
+
 ## OMJB evaluation harness
 
 The additive `omjb` package now runs either external corpora or the existing Guardrail Lab case registry directly (`--suite guardrail-lab`), including the 24 core cases and 52 reviewed source-derived safe adaptations. It preserves the existing Guardrail Lab CLI and workflows; see [OMJB documentation](omjb/README.md). It includes a shared JSON/dict-root/JSONL/YAML/compressed corpus reader, ordered defensive guard pipelines, provenance validation and hashing, per-stage evidence, human-adjudication joins, and regression/export commands. It does not replace the benchmark, scanner, original-source metadata browser, or manual-review workspace. It includes Echo, OpenAI-compatible, Anthropic, Gemini, and Ollama targets; JSON/JSONL and optional YAML probe loading; defensive keyword/regex/composite guards; sequential guarded execution; SQLite evidence and guard observations; provenance manifests; human adjudication; Wilson intervals and adjudication-only classification metrics; regression comparisons; and JSONL/CSV/report exports.
