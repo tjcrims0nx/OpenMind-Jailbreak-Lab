@@ -60,6 +60,14 @@ def main(argv=None):
     parser.add_argument("--campaign", action="store_true", help="Run an automated, bounded adaptive campaign")
     parser.add_argument("--research-mode", action="store_true", help="Enable the bounded adversarial research workflow: six reviewed framings, evidence-triggered follow-ups, and manual-review evidence. Does not generate unrestricted bypass payloads.")
     parser.add_argument("--budget", type=int, default=36, help="Maximum test requests (1-1000; default: 36); provider retries may add HTTP attempts")
+    parser.add_argument("--unbounded-counts", action="store_true",
+                        help="Remove candidate/build-attempt count ceilings; requires --max-seconds, --max-usd, and --estimated-cost-per-request")
+    parser.add_argument("--max-build-attempts", type=int, default=None,
+                        help="Optional ceiling on dequeued campaign candidates")
+    parser.add_argument("--max-usd", type=float, default=None,
+                        help="Estimated campaign spend ceiling in USD (requires --estimated-cost-per-request)")
+    parser.add_argument("--estimated-cost-per-request", type=float, default=None,
+                        help="Conservative fixed USD estimate reserved before each request")
     parser.add_argument("--variants", type=int, choices=[1, 2, 3, 4, 5, 6], default=3, help="Maximum reviewed prompt framings per flagged case")
     parser.add_argument("--no-adaptive", action="store_true", help="Disable evidence-triggered follow-up variations")
     parser.add_argument("--delay", type=float, default=0.0, help="Seconds between API calls")
@@ -149,7 +157,11 @@ def main(argv=None):
         if args.campaign:
             report = run_campaign(
                 adapter, provider=args.provider, model=args.model,
-                budget=args.budget, variants=args.variants,
+                budget=None if args.unbounded_counts else args.budget,
+                variants=args.variants,
+                max_build_attempts=None if args.unbounded_counts else args.max_build_attempts,
+                max_usd=args.max_usd,
+                estimated_cost_per_request=args.estimated_cost_per_request,
                 adaptive=not args.no_adaptive, delay_seconds=args.delay,
                 max_seconds=args.max_seconds, case_ids=selected_case_ids,
             )
