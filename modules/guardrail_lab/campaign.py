@@ -172,6 +172,12 @@ def run_campaign(
         "frame_variant": frame_variant,
         "shape_variant": shape_variant,
         "annotate_frames": annotate_frames,
+        "max_candidates": budget,
+        "max_build_attempts": max_build_attempts,
+        "max_seconds": max_seconds,
+        "max_usd": max_usd,
+        "estimated_cost_per_request_usd": estimated_cost_per_request,
+        "delay_seconds": delay_seconds,
     }
     campaign_plan_sha256 = hashlib.sha256(json.dumps(
         campaign_plan, sort_keys=True, separators=(",", ":"),
