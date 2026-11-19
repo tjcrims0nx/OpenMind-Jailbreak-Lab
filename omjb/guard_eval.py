@@ -19,7 +19,7 @@ def load_labeled(path,require_provenance=False,dedupe=False):
         seen.add(digest); item=dict(row); item["provenance"]=prov.to_dict(); rows.append(item)
     return rows
 
-def evaluate(guard:Guard,samples,store=None,run_name="guard-eval"):
+def evaluate(guard:Guard,samples,store=None,run_name="guard-eval",config=None):
     samples=list(samples); observations=[]
     tp=fp=tn=fn=0; per_category={}
     for row in samples:
@@ -38,6 +38,6 @@ def evaluate(guard:Guard,samples,store=None,run_name="guard-eval"):
         "accuracy":(tp+tn)/n if n else None,"recall_wilson_95":wilson_interval(tp,tp+fn),"by_category":per_category}
     if store is not None:
         from .guard_review import persist_evaluation
-        run_id=persist_evaluation(store,samples,guard,run_name,observations)
+        run_id=persist_evaluation(store,samples,guard,run_name,observations,config=config)
         result["guard_run_id"]=run_id
     return result
