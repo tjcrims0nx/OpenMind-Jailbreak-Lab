@@ -120,6 +120,8 @@ The inventory is metadata-only and contains no executable raw prompts. Separatel
 
 For a local provider-neutral runner with a SQLite evidence store, reviewer-scoped model adjudication, standalone benign/attack guard evaluation, and provenance-checked corpus imports, see the [OMJB guide](omjb/README.md). OMJB is an additional package; the standard 76-case GitHub Actions workflow above remains the quickest route and is unchanged.
 
+- **OMJB evaluation harness:** [installation and operator guide](omjb/INSTALLATION.md) for the integrated corpus runner, Guardrail Lab adapter, provider setup, provenance, pipelines, and human adjudication.
+
 ## Need the full reference?
 
 See [Installation](INSTALLATION.md), [Guardrail Lab documentation](modules/guardrail_lab/README.md), and the [provider matrix](modules/guardrail_lab/PROVIDER_MATRIX.md).
