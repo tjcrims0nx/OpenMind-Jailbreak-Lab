@@ -107,7 +107,20 @@ class MutationEngineTests(unittest.TestCase):
         from omjb.mutation_engine.adapter import httpx_submitter
         with self.assertRaisesRegex(ValueError,"HTTPS"):
             httpx_submitter("http://localhost.attacker.example/evaluate")
+        with self.assertRaisesRegex(ValueError,"finite and positive"):
+            httpx_submitter("https://guard.example/evaluate",timeout=float("nan"))
+        with self.assertRaisesRegex(ValueError,"finite and positive"):
+            httpx_submitter("https://guard.example/evaluate",timeout=float("inf"))
         self.assertTrue(callable(httpx_submitter("http://127.0.0.1:8000/evaluate")))
+
+    def test_cli_requires_explicit_cost_estimate(self):
+        from omjb.mutation_engine.cli import main
+        import contextlib,io
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                main(["--spec","spec.json","--corpus","corpus.jsonl",
+                      "--probe-id","p1","--endpoint","https://guard.example"])
+        self.assertEqual(raised.exception.code,2)
 
     def test_scheduler_does_not_select_pruned_arms(self):
         scheduler=CostAwareUCB(prune_after=1,prune_below=.5)
