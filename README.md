@@ -187,6 +187,14 @@ python -m omjb.cli run --suite guardrail-lab --case GL-001 --name smoke --target
 
 For provider setup, corpus formats, async endpoint evaluation, typed region-aware benign mutation tests, provenance, adjudication, and export examples, see the [OMJB installation guide](omjb/INSTALLATION.md), [remote evaluation](docs/remote-evaluation.md), [mutation engine](docs/mutation-engine.md), and [OMJB reference](omjb/README.md). Keep provider keys in environment variables or GitHub Actions secrets—never in source files.
 
+## Scalable benign robustness testing
+
+The OMJB mutation engine now supports removing per-run **count** ceilings without removing its other controls. In a pipeline spec, set `budget.max_candidates` and/or `budget.max_build_attempts` to JSON `null`; the finite `max_seconds` and `max_usd` budgets still apply. A positive USD budget requires a conservative `estimate_cost` callback. For the separate benign mutation API, `MutationEngine(max_variants=None)` enumerates all variants available at the configured chain depth. The async provider evaluator accepts `max_mutations_per_probe=None`; this disables its per-probe variant cap, not provider-side quotas, rate limits, or billing.
+
+Mutation is restricted to human-reviewed benign probes with `expected="comply"` and `meta.mutation_safe=true`. The engine preserves task meaning, deduplicates outputs, and records reproducibility evidence. These settings increase benign test coverage; they do not disable safeguards or create harmful bypass instructions.
+
+See [mutation engine capacity and budgets](docs/mutation-engine.md), [benign mutation robustness API](docs/mutation-robustness.md), and [remote evaluation limits](docs/remote-evaluation.md).
+
 ## OMJB evaluation harness
 
 The additive `omjb` package now runs either external corpora or the existing Guardrail Lab case registry directly (`--suite guardrail-lab`), including the 24 core cases and 52 reviewed source-derived safe adaptations. It preserves the existing Guardrail Lab CLI and workflows; see [OMJB documentation](omjb/README.md). It includes a shared JSON/dict-root/JSONL/YAML/compressed corpus reader, ordered defensive guard pipelines, provenance validation and hashing, per-stage evidence, human-adjudication joins, and regression/export commands. It does not replace the benchmark, scanner, original-source metadata browser, or manual-review workspace. It includes Echo, OpenAI-compatible, Anthropic, Gemini, and Ollama targets; JSON/JSONL and optional YAML probe loading; defensive keyword/regex/composite guards; sequential guarded execution; SQLite evidence and guard observations; provenance manifests; human adjudication; Wilson intervals and adjudication-only classification metrics; regression comparisons; and JSONL/CSV/report exports.
