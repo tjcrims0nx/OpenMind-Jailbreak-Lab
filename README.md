@@ -168,13 +168,14 @@ OpenMind is experimental software, not a certification. Provider behavior change
 
 ## OMJB evaluation harness
 
-The additive `omjb` package provides a second, reusable evaluation interface without replacing Guardrail Lab, the 76-case suite, the benchmark, scanner, or manual-review workspace. It includes Echo, OpenAI-compatible, Anthropic, Gemini, and Ollama targets; JSON/JSONL and optional YAML probe loading; defensive keyword/regex/composite guards; sequential guarded execution; SQLite evidence and guard observations; provenance manifests; human adjudication; Wilson intervals and adjudication-only classification metrics; regression comparisons; and JSONL/CSV/report exports.
+The additive `omjb` package now runs either external corpora or the existing Guardrail Lab case registry directly (`--suite guardrail-lab`), including the 24 core cases and 52 reviewed source-derived safe adaptations. It preserves the existing Guardrail Lab CLI and workflows; see [OMJB documentation](omjb/README.md). It includes a shared JSON/dict-root/JSONL/YAML/compressed corpus reader, ordered defensive guard pipelines, provenance validation and hashing, per-stage evidence, human-adjudication joins, and regression/export commands. It does not replace the benchmark, scanner, original-source metadata browser, or manual-review workspace. It includes Echo, OpenAI-compatible, Anthropic, Gemini, and Ollama targets; JSON/JSONL and optional YAML probe loading; defensive keyword/regex/composite guards; sequential guarded execution; SQLite evidence and guard observations; provenance manifests; human adjudication; Wilson intervals and adjudication-only classification metrics; regression comparisons; and JSONL/CSV/report exports.
 
 Quick offline check:
 
 ```bash
-python -m unittest tests.test_omjb -v
+python -m unittest discover -s tests -p 'test_omjb.py' -v
 python -m omjb.cli run --probes corpus/omjb_probes.json --name local-check --target echo
+python -m omjb.cli run --suite guardrail-lab --case GL-001 --name lab-adapter-check --target echo
 python -m omjb.cli report 1
 ```
 
