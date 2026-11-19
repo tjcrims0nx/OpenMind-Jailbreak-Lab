@@ -137,6 +137,15 @@ class Engine:
                     verdict=self.submit(candidate.payload)
                     if not isinstance(verdict,Verdict):
                         raise TypeError("submit must return Verdict")
+                    import math
+                    if not isinstance(verdict.allowed,bool):
+                        raise TypeError("Verdict.allowed must be boolean")
+                    for field_name in ("latency_ms","cost_usd"):
+                        field_value=getattr(verdict,field_name)
+                        if isinstance(field_value,bool) or not isinstance(field_value,(int,float)) or not math.isfinite(field_value) or field_value<0:
+                            raise ValueError(f"Verdict.{field_name} must be finite and non-negative")
+                    if verdict.error is not None and not isinstance(verdict.error,str):
+                        raise TypeError("Verdict.error must be a string or None")
                 except Exception as exc:
                     verdict=Verdict(False,error=f"{type(exc).__name__}: {exc}")
                 self.budget.spent_candidates+=1
