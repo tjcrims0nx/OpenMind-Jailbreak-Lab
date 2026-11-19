@@ -706,7 +706,7 @@ From the repository root, with Python 3.10 or newer:
 ```bash
 python -m venv .venv
 # macOS/Linux: source .venv/bin/activate
-# Windows PowerShell: .venv\\Scripts\\Activate.ps1
+# Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e .
 # Optional YAML input support:
