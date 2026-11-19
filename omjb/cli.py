@@ -122,8 +122,8 @@ def main(argv=None):
         elif args.cmd=="guard-adjudicate":
             from .guard_review import pending,adjudicate
             for row in pending(store,args.run_id,args.reviewer):
-                print("\\n"+"="*60+"\\n",row["sample_id"],row["category"],row["decision"])
-                print("EXPECTED:",row["expected_label"],"\\nTEXT:",row["text"][:1000])
+                print("\n"+"="*60+"\n",row["sample_id"],row["category"],row["decision"])
+                print("EXPECTED:",row["expected_label"],"\nTEXT:",row["text"][:1000])
                 label=input("review [correct/incorrect/unclear/skip]> ").strip().lower() or "skip"
                 notes=input("notes> ").strip()
                 adjudicate(store,row["id"],label,notes,reviewer=args.reviewer)
