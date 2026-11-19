@@ -1,17 +1,22 @@
 """Synchronous adapter for an operator-controlled guardrail endpoint."""
 from __future__ import annotations
 from urllib.parse import urlparse
+import math
 from .core import Verdict
 
 def httpx_submitter(endpoint: str, *, headers: dict[str,str] | None = None, timeout: float = 15.0):
+    if not isinstance(endpoint,str) or not endpoint:
+        raise ValueError("endpoint must be a non-empty URL")
+    if isinstance(timeout,bool) or not isinstance(timeout,(int,float)) or not math.isfinite(timeout) or timeout<=0:
+        raise ValueError("timeout must be finite and positive")
+    if headers is not None and not isinstance(headers,dict):
+        raise ValueError("headers must be a mapping")
     parsed=urlparse(endpoint)
     local_hosts={"localhost","127.0.0.1","::1"}
     if parsed.scheme!="https" and not (parsed.scheme=="http" and parsed.hostname in local_hosts):
         raise ValueError("endpoint must use HTTPS (HTTP is allowed only for loopback)")
     if not parsed.hostname:
         raise ValueError("endpoint must include a hostname")
-    if timeout<=0:
-        raise ValueError("timeout must be positive")
     try:
         import httpx
     except ImportError as exc:
