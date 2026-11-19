@@ -33,3 +33,26 @@ History assessments must be one of: `ambiguous_canary_mention`,
 `potential_guardrail_failure`. The scheduler rejects unknown labels and
 untested-variant duplication. `request_budget` is checked before returning
 any planned calls.
+
+
+## Capacity controls and reproducible campaigns
+
+The campaign runner accepts independent candidate and build-attempt ceilings:
+
+- `--budget` / `max_candidates` caps provider requests (default: 36).
+- `--max-build-attempts` caps dequeued campaign candidates, including adaptive follow-ups.
+- `--max-seconds` stops scheduling when the wall-clock budget is reached. It cannot cancel a provider request already in flight.
+- `--max-usd` is an estimated spend ceiling. It must be paired with `--estimated-cost-per-request`; the runner reserves that estimate before sending each request and will not schedule a request that would exceed the ceiling.
+
+For count-unbounded operation, use `--unbounded-counts`. This sets both candidate and build-attempt ceilings to `None` and **requires** finite `--max-seconds`, `--max-usd`, and a positive `--estimated-cost-per-request`. Example:
+
+```bash
+guardrail-lab --provider gemini --campaign --research-mode \
+  --unbounded-counts --max-seconds 300 \
+  --max-usd 2.00 --estimated-cost-per-request 0.01 \
+  --output campaign.json
+```
+
+The USD control is a conservative reservation based on the operator-supplied per-request estimate, not a provider invoice or verified actual spend. Provider retries, token usage, provider-side pricing changes, and billing adjustments can make actual charges differ. Keep provider-side spending limits enabled.
+
+Each report records the campaign plan, its SHA-256 fingerprint, capacity settings, build-attempt count, estimated spend, and per-result estimate. The plan fingerprint is deterministic for the same case set and campaign settings; timestamps and provider outputs are evidence, not part of that fingerprint. The fixed reviewed framing set and existing evidence-triggered expansion rule are unchanged. Adaptive selection changes coverage order only; it does not generate stronger prompts or remove the trusted system instruction.
