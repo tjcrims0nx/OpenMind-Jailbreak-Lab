@@ -206,6 +206,8 @@ def run_campaign(
                     reviewed["decision"] == "approved"
                     and prior_result.get("case_id") == case.case_id
                     and prior_result.get("assessment") == "potential_guardrail_failure"
+                    and prior_result.get("provider") == provider
+                    and prior_result.get("model") == model
                 ):
                     for next_index in range(1, variants):
                         queue.append((case, next_index))
@@ -215,7 +217,7 @@ def run_campaign(
             if campaign_test_key(
                 case.case_id, VARIANTS[index][0], FRAME_SET_HASH,
                 _frame_annotation(CASES.index(case) * len(VARIANTS) + index, shape_variant=shape_variant)["frame_variant"] if frame_variant is None else frame_variant,
-                _frame_annotation(CASES.index(case) * len(VARIANTS) + index, shape_variant=shape_variant)["shape_variant"],
+                _frame_annotation(CASES.index(case) * len(VARIANTS) + index, shape_variant=(shape_variant or (frame_variant and SHAPE_VARIANTS[0])))["shape_variant"],
                 provider, model,
             ) not in attempted_keys
         ]
@@ -290,13 +292,13 @@ def run_campaign(
                 record["shape_variant"] = shape_variant
         results.append(record)
         if history_store:
-            annotation = _frame_annotation(frame_index, shape_variant=shape_variant)
+            annotation = _frame_annotation(frame_index, shape_variant=(shape_variant or (frame_variant and SHAPE_VARIANTS[0])))
             if frame_variant is not None:
                 annotation["frame_variant"] = frame_variant
             key = campaign_test_key(
                 case.case_id, variant_name, FRAME_SET_HASH,
                 annotation["frame_variant"], annotation["shape_variant"],
-                provider, record.get("model") or model,
+                provider, model,
             )
             history_store.record_result(
                 test_key=key,
