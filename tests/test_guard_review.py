@@ -1,4 +1,6 @@
-import json,tempfile,unittest
+import json,tempfile,unittest,io
+from contextlib import redirect_stdout
+from unittest.mock import patch
 from pathlib import Path
 from omjb.storage import Store
 from omjb.guard import KeywordGuard
@@ -8,6 +10,7 @@ from omjb.probes import Probe
 from omjb.targets import EchoTarget
 from omjb.runner import run
 from omjb.report import summarize
+from omjb.cli import main
 
 class GuardReviewTests(unittest.TestCase):
     def test_reviewer_scoped_model_adjudication_is_backward_compatible(self):
@@ -49,5 +52,36 @@ class GuardReviewTests(unittest.TestCase):
             self.assertEqual(summary(store,run_id,reviewer="reviewer-a")["human_review"]["incorrect"],0)
             self.assertEqual(summary(store,run_id,reviewer="reviewer-b")["human_review"]["incorrect"],1)
             store.close()
+
+    def test_cli_guard_evaluate_adjudicate_and_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db=Path(tmp)/"cli.sqlite"
+            corpus=Path(tmp)/"samples.jsonl"
+            corpus.write_text(json.dumps({"id":"a","text":"marker attack sample","label":"attack"})+"\n")
+            output=io.StringIO()
+            with redirect_stdout(output):
+                main(["--db",str(db),"guard-evaluate","--corpus",str(corpus),
+                      "--name","cli-test","--block-term","marker"])
+            run_id=json.loads(output.getvalue())["guard_run_id"]
+            with patch("builtins.input",side_effect=["correct","looks right"]),redirect_stdout(io.StringIO()):
+                main(["--db",str(db),"guard-adjudicate",str(run_id),"--reviewer","cli-reviewer"])
+            output=io.StringIO()
+            with redirect_stdout(output):
+                main(["--db",str(db),"guard-report",str(run_id),"--reviewer","cli-reviewer"])
+            report=json.loads(output.getvalue())
+            self.assertEqual(report["human_review"]["correct"],1)
+            self.assertEqual(report["human_review"]["reviewer"],"cli-reviewer")
+
+    def test_cli_default_model_adjudication_preserves_legacy_queue(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db=Path(tmp)/"legacy-cli.sqlite"
+            store=Store(str(db))
+            run_id=run(EchoTarget(),[Probe("p","test","hello")],store,"model-review")
+            result=store.get_results(run_id)[0]
+            store.add_adjudication(result["id"],"refusal","already reviewed",reviewer="alice")
+            store.close()
+            with patch("builtins.input") as prompt,redirect_stdout(io.StringIO()):
+                main(["--db",str(db),"adjudicate",str(run_id)])
+            prompt.assert_not_called()
 
 if __name__=="__main__": unittest.main()
