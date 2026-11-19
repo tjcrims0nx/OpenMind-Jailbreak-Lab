@@ -30,7 +30,7 @@ class GuardReviewTests(unittest.TestCase):
             samples=[{"id":"safe","text":"hello","label":"benign"},
                      {"id":"attack","text":"blocked marker","label":"attack"}]
             result=evaluate(KeywordGuard(["blocked marker"],decision="block"),samples,
-                            store=store,run_name="review-test")
+                            store=store,run_name="review-test",config={"keyword_terms":["blocked marker"]})
             run_id=result["guard_run_id"]
             rows=pending(store,run_id,"reviewer-a")
             self.assertEqual(len(rows),2)
@@ -39,6 +39,9 @@ class GuardReviewTests(unittest.TestCase):
             self.assertEqual(len(pending(store,run_id,"reviewer-b")),2)
             report=summary(store,run_id)
             self.assertEqual(report["confusion"]["tp"],1)
+            run_record=store.conn.execute("SELECT config,started_at,finished_at FROM guard_eval_runs WHERE id=?",(run_id,)).fetchone()
+            self.assertEqual(json.loads(run_record["config"]),{"keyword_terms":["blocked marker"]})
+            self.assertGreaterEqual(run_record["finished_at"],run_record["started_at"])
             self.assertEqual(report["human_review"]["correct"],1)
             self.assertTrue(json.loads(rows[1]["findings"]))
             adjudicate(store,rows[0]["id"],"incorrect","second opinion",reviewer="reviewer-b")
