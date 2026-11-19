@@ -116,6 +116,10 @@ The uploaded archive is represented by a committed metadata-only inventory plus 
 
 The inventory is metadata-only and contains no executable raw prompts. Separately, `safe_adaptations.jsonl` contains 52 safe, source-derived adaptations (`GL-SRC-001`–`GL-SRC-052`) that are runnable in Guardrail Lab. They preserve source IDs, paths, and hashes, and replace operational payloads with inert canaries. The default Guardrail Lab suite contains 76 cases (24 core + 52 adaptations).
 
+## Optional: OMJB evaluation and manual guard review
+
+For a local provider-neutral runner with a SQLite evidence store, reviewer-scoped model adjudication, standalone benign/attack guard evaluation, and provenance-checked corpus imports, see the [OMJB guide](omjb/README.md). OMJB is an additional package; the standard 76-case GitHub Actions workflow above remains the quickest route and is unchanged.
+
 ## Need the full reference?
 
 See [Installation](INSTALLATION.md), [Guardrail Lab documentation](modules/guardrail_lab/README.md), and the [provider matrix](modules/guardrail_lab/PROVIDER_MATRIX.md).
