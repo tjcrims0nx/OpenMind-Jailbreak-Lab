@@ -7,7 +7,7 @@ from .guard import KeywordGuard,RegexGuard,CompositeGuard,GuardFinding
 
 @dataclass
 class StageResult:
-    stage:str; action:str; score:float; reason:str; guard:str; elapsed_ms:float=0.0
+    stage:str; action:str; score:float; reason:str; guard:str; elapsed_ms:float=0.0; on:str="input"
 @dataclass
 class PipelineResult:
     action:str; score:float; reason:str; stages:list[StageResult]=field(default_factory=list); blocked_at:str|None=None
@@ -69,7 +69,7 @@ class GuardPipeline:
             elapsed=(time.monotonic()-start)*1000
             if action=="block" and s.policy=="flag": action="review"
             if s.policy=="allow": action="allow"
-            trace.append(StageResult(s.name,action,score,reason,type(s.guard).__name__,elapsed))
+            trace.append(StageResult(s.name,action,score,reason,type(s.guard).__name__,elapsed,direction))
             if action=="block":
                 result=PipelineResult("block",score,f"{direction}/{s.name}: {reason}",trace,s.name)
                 return result,"block"
