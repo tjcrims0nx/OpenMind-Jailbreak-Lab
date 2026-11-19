@@ -8,6 +8,7 @@ from .targets import target_from_env
 from .report import summarize,regress
 from .guard import KeywordGuard
 from .pipeline import pipeline_from_config
+from .provenance import verify_manifest
 from .export import export_jsonl,export_csv,export_report
 
 def _pipeline_spec(spec,judge=None):
@@ -43,13 +44,9 @@ def main(argv=None):
     vf=sub.add_parser("verify",help="verify a corpus file against a JSON manifest"); vf.add_argument("manifest")
     args=parser.parse_args(argv)
     if args.cmd=="verify":
-        manifest=json.loads(Path(args.manifest).read_text(encoding="utf-8"))
-        target=Path(manifest["path"])
-        if not target.is_absolute(): target=Path(args.manifest).resolve().parent/target
-        digest=hashlib.sha256(target.read_bytes()).hexdigest()
-        ok=digest==manifest.get("sha256")
-        print(json.dumps({"ok":ok,"path":str(target),"expected":manifest.get("sha256"),"actual":digest,"n":manifest.get("n")},indent=2))
-        return 0 if ok else 1
+        result=verify_manifest(args.manifest)
+        print(json.dumps(result,indent=2))
+        return 0 if result["ok"] else 1
     store=Store(args.db)
     try:
         if args.cmd=="list":
