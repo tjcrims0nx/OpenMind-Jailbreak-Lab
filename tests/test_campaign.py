@@ -215,5 +215,73 @@ class CampaignTests(unittest.TestCase):
         self.assertEqual(len(calls), 2)
         self.assertFalse(report["campaign"]["halted"])
 
+    def test_campaign_enforces_build_attempt_capacity(self):
+        def canary_call(messages):
+            return "CANARY-GL001" if "CANARY-GL001" in str(messages) else "untrusted"
+        report = run_campaign(
+            canary_call, provider="mock", budget=10,
+            max_build_attempts=2, adaptive=True, variants=6,
+            case_ids=["GL-001", "GL-002"],
+        )
+        self.assertEqual(report["campaign"]["attempts"], 2)
+        self.assertEqual(report["campaign"]["build_attempts"], 2)
+        self.assertEqual(report["campaign"]["halt_reason"], "max_build_attempts")
+        self.assertEqual(
+            [r["variant"] for r in report["results"]],
+            ["baseline", "evaluation_context"],
+        )
+
+    def test_campaign_reserves_estimated_usd_before_each_request(self):
+        calls = []
+        def recorder(messages):
+            calls.append(messages)
+            return "untrusted"
+        report = run_campaign(
+            recorder, provider="mock", budget=10,
+            max_usd=0.02, estimated_cost_per_request=0.01,
+            case_ids=["GL-001", "GL-002", "GL-003"],
+        )
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(report["campaign"]["estimated_spend_usd"], 0.02)
+        self.assertEqual(report["campaign"]["halt_reason"], "estimated_usd_budget")
+        self.assertTrue(all(r["estimated_cost_usd"] == 0.01 for r in report["results"]))
+
+    def test_unbounded_count_limits_require_time_and_cost_limits(self):
+        with self.assertRaisesRegex(ValueError, "require finite max_seconds and max_usd"):
+            run_campaign(
+                lambda messages: "untrusted", provider="mock",
+                budget=None, max_build_attempts=None, max_seconds=10,
+            )
+        report = run_campaign(
+            lambda messages: "untrusted", provider="mock",
+            budget=None, max_build_attempts=None, max_seconds=10,
+            max_usd=0.10, estimated_cost_per_request=0.01,
+            adaptive=False, case_ids=["GL-001", "GL-002"],
+        )
+        self.assertIsNone(report["campaign"]["max_candidates"])
+        self.assertIsNone(report["campaign"]["max_build_attempts"])
+        self.assertEqual(report["campaign"]["attempts"], 2)
+
+    def test_campaign_plan_fingerprint_is_stable_and_capacity_sensitive(self):
+        def run(budget):
+            return run_campaign(
+                lambda messages: "untrusted", provider="mock",
+                budget=budget, adaptive=False, case_ids=["GL-001"],
+            )["campaign"]["campaign_plan_sha256"]
+        self.assertEqual(run(2), run(2))
+        self.assertNotEqual(run(2), run(3))
+
+    def test_usd_limit_requires_positive_estimate(self):
+        with self.assertRaisesRegex(ValueError, "estimated_cost_per_request is required"):
+            run_campaign(
+                lambda messages: "untrusted", provider="mock",
+                budget=2, max_usd=1.0,
+            )
+        with self.assertRaisesRegex(ValueError, "finite positive number"):
+            run_campaign(
+                lambda messages: "untrusted", provider="mock",
+                budget=2, max_usd=1.0, estimated_cost_per_request=0,
+            )
+
 if __name__ == "__main__":
     unittest.main()
