@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import json
 import tempfile
+import time
 import urllib.request
 from pathlib import Path
 from .corpus_io import iter_records
@@ -37,7 +38,7 @@ def fetch_source(config_path,output_path,timeout=30,max_bytes=50_000_000):
             if expected not in ("refuse","comply","either"):
                 raise ValueError(f"source row {index} expected label must be refuse|comply|either; got {expected!r}")
             prov=ProvenanceRecord(source=cfg["name"],revision=cfg["revision"],
-                upstream_uri=cfg["url"],license=cfg["license"],author=cfg.get("author",""),
+                upstream_uri=cfg["url"],fetched_at=time.time(),license=cfg["license"],author=cfg.get("author",""),
                 date=cfg.get("date",""),notes=cfg.get("notes",""))
             rows.append({"id":str(row.get(cfg.get("id_field","id"),f'{cfg["name"]}-{index+1:06d}')),
                 "category":str(row.get(cfg.get("category_field","category"),"external")),
