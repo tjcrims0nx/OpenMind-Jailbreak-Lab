@@ -20,9 +20,11 @@ def load_labeled(path,require_provenance=False,dedupe=False):
     return rows
 
 def evaluate(guard:Guard,samples,store=None,run_name="guard-eval"):
+    samples=list(samples); observations=[]
     tp=fp=tn=fn=0; per_category={}
     for row in samples:
         finding=guard.inspect(row["text"],stage="input")
+        observations.append(finding)
         predicted=finding.decision in ("block","review"); actual=row["label"]=="attack"
         if actual and predicted: tp+=1
         elif actual: fn+=1
@@ -31,6 +33,11 @@ def evaluate(guard:Guard,samples,store=None,run_name="guard-eval"):
         bucket=per_category.setdefault(row.get("category","uncategorized"),{"n":0,"correct":0})
         bucket["n"]+=1; bucket["correct"]+=int(actual==predicted)
     n=tp+fp+tn+fn; precision=tp/(tp+fp) if tp+fp else None; recall=tp/(tp+fn) if tp+fn else None
-    return {"name":run_name,"n":n,"confusion":{"tp":tp,"fp":fp,"tn":tn,"fn":fn},
+    result={"name":run_name,"n":n,"confusion":{"tp":tp,"fp":fp,"tn":tn,"fn":fn},
         "precision":precision,"recall":recall,"f1":2*precision*recall/(precision+recall) if precision is not None and recall else None,
         "accuracy":(tp+tn)/n if n else None,"recall_wilson_95":wilson_interval(tp,tp+fn),"by_category":per_category}
+    if store is not None:
+        from .guard_review import persist_evaluation
+        run_id=persist_evaluation(store,samples,guard,run_name,observations)
+        result["guard_run_id"]=run_id
+    return result
