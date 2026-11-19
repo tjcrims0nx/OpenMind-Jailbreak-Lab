@@ -173,7 +173,7 @@ The integrated OMJB harness is included in this repository. From the repository 
 ```bash
 python -m venv .venv
 # macOS/Linux: source .venv/bin/activate
-# Windows PowerShell: .venv\\Scripts\\Activate.ps1
+# Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e .
 # Optional YAML corpus support:
