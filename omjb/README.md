@@ -42,7 +42,21 @@ Probe files may be JSON arrays, common dictionary-root datasets (including `inst
 
 The `omjb.guardrail_adapter` imports the repository's existing Guardrail Lab cases directly, including the 24 core cases and 52 reviewed source-derived safe adaptations. It preserves case IDs, expected signals, canaries, and source metadata; it does not copy or execute the original-source archive. Run the existing suite through OMJB with `python -m omjb.cli run --suite guardrail-lab --name guardrail-omjb --target echo` (replace Echo with an authorized live provider when ready). The original `python -m modules.guardrail_lab` workflow remains unchanged.
 
-Composable keyword, regex and composite guards are available in `omjb.guard`; ordered stages are configured with `--pipeline-json PATH` or inline JSON. The legacy keyword review/block flags remain supported. A blocked input is not sent to the provider. A blocked output is quarantined in the evidence record and marked for review. A review decision is recorded but does not silently block. These are defensive controls, not jailbreak generation or bypass optimization.
+Composable keyword, regex, composite, and optional model-assisted review guards are available; ordered stages are configured with `--pipeline-json PATH` or inline JSON. Model stages require `--judge-target gemini|openai|anthropic|ollama` and optional `--judge-model`; they can only flag for human review, never auto-confirm a finding. The legacy keyword review/block flags remain supported.
+
+Example pipeline:
+
+```json
+{
+  "name": "input-and-output-review",
+  "stages": [
+    {"name": "input-keywords", "on": "input", "policy": "block", "guard": {"kind": "keyword", "block_terms": ["example-marker"]}},
+    {"name": "output-patterns", "on": "output", "policy": "flag", "guard": {"kind": "regex", "patterns": ["\\\\bexample\\\\b"]}}
+  ]
+}
+```
+
+Run it with `python -m omjb.cli run --suite guardrail-lab --name pipeline-check --target echo --pipeline-json pipeline.json`. A blocked input is not sent to the provider. A blocked output is quarantined in the evidence record and marked for review. A review decision is recorded but does not silently block. These are defensive controls, not jailbreak generation or bypass optimization.
 
 ## Evidence, adjudication and metrics
 
