@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "seed": 22,
+  "budget": {
+    "max_candidates": 12,
+    "max_usd": 0.05,
+    "max_seconds": 20,
+    "max_build_attempts": 60
+  },
+  "stages": [
+    {
+      "name": "segment_reviewed_fixture",
+      "arms": [
+        {"name": "format.segment_fixture", "params": {"header": "Reviewed fixture: "}}
+      ]
+    },
+    {
+      "name": "encode_body_only",
+      "arms": ["encoding.base64_blob"]
+    },
+    {
+      "name": "normalize_header_only",
+      "arms": ["unicode.prefix_nfc"]
+    }
+  ]
+}
