@@ -90,7 +90,7 @@ def summary(store, run_id):
         else: tn+=1
     reviews=[dict(r) for r in store.conn.execute(
         """SELECT a.* FROM guard_adjudications a JOIN guard_eval_results r
-        ON r.id=a.result_id WHERE r.run_id=? AND a.label!='skip'""",(run_id,))]
+        ON r.id=a.result_id WHERE r.run_id=? AND a.label IN ('correct','incorrect')""",(run_id,))]
     correct=sum(r["label"]=="correct" for r in reviews)
     n=len(reviews)
     return {"run_id":run_id,"name":run["name"],"guard":run["guard_name"],"n":len(rows),
@@ -100,6 +100,6 @@ def summary(store, run_id):
       "accuracy":(tp+tn)/len(rows) if rows else None,
       "recall_wilson_95":wilson_interval(tp,tp+fn),
       "human_review":{"n":n,"correct":correct,"incorrect":sum(r["label"]=="incorrect" for r in reviews),
-                      "unclear":sum(r["label"]=="unclear" for r in reviews),
+                      "unclear":store.conn.execute("SELECT COUNT(*) FROM guard_adjudications a JOIN guard_eval_results r ON r.id=a.result_id WHERE r.run_id=? AND a.label='unclear'",(run_id,)).fetchone()[0],
                       "agreement_rate":correct/n if n else None},
       "note":"Human review assesses whether each recorded guard decision is correct; it is not model-response adjudication."}
