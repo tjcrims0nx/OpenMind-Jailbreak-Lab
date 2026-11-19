@@ -38,7 +38,7 @@ def main(argv=None):
     for arg in ("input-review-term","input-block-term","output-review-term","output-block-term"): rp.add_argument("--"+arg,action="append",default=[])
     rep=sub.add_parser("report"); rep.add_argument("run_id",type=int); rep.add_argument("--reviewer",default=None)
     diff=sub.add_parser("regress"); diff.add_argument("baseline",type=int); diff.add_argument("candidate",type=int)
-    adj=sub.add_parser("adjudicate"); adj.add_argument("run_id",type=int); adj.add_argument("--reviewer",default="")
+    adj=sub.add_parser("adjudicate"); adj.add_argument("run_id",type=int); adj.add_argument("--reviewer",default=None)
     exp=sub.add_parser("export"); exp.add_argument("run_id",type=int); exp.add_argument("--format",choices=("jsonl","csv","report"),required=True); exp.add_argument("--output",required=True)
     exp.add_argument("--include-adjudication",action="store_true"); exp.add_argument("--adjudicated-only",action="store_true"); exp.add_argument("--reviewer",default=None)
     ge=sub.add_parser("guard-evaluate",help="evaluate a guard against labeled benign/attack samples")
@@ -118,7 +118,7 @@ def main(argv=None):
                 name="cli-keyword-guard"
                 def inspect(self,text,stage="input"):
                     return evaluate_guards(text,guards,stage=stage)
-            print(json.dumps(evaluate(_Guard(),samples,store=store,run_name=args.name),indent=2))
+            print(json.dumps(evaluate(_Guard(),samples,store=store,run_name=args.name,config={"guard":"keyword","review_terms":args.review_term,"block_terms":args.block_term}),indent=2))
         elif args.cmd=="guard-adjudicate":
             from .guard_review import pending,adjudicate
             for row in pending(store,args.run_id,args.reviewer):
@@ -135,7 +135,7 @@ def main(argv=None):
                 print("\n"+"="*60+"\n",row["probe_id"],row["detector_label"],row["detector_reason"])
                 print("PROMPT:",row["prompt"][:500],"\nRESPONSE:",row["response"][:1000])
                 label=input("label [refusal/compliance/partial/unclear/skip]> ").strip().lower() or "skip"
-                notes=input("notes> ").strip(); store.add_adjudication(row["id"],label,notes,reviewer=args.reviewer)
+                notes=input("notes> ").strip(); store.add_adjudication(row["id"],label,notes,reviewer=args.reviewer or "")
     finally: store.close()
     return 0
 if __name__=="__main__": raise SystemExit(main())
