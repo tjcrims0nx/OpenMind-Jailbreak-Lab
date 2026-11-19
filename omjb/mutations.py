@@ -170,10 +170,10 @@ class NarrativeGraph:
 class MutationEngine:
     """Generate bounded, reproducible variants for explicitly approved benign probes."""
 
-    def __init__(self, *, max_variants: int = 32, max_chain_depth: int = 2,
+    def __init__(self, *, max_variants: int | None = 32, max_chain_depth: int = 2,
                  include_parser_cases: bool = True):
-        if max_variants < 1 or max_chain_depth < 1:
-            raise ValueError("max_variants and max_chain_depth must be positive")
+        if (max_variants is not None and (isinstance(max_variants, bool) or max_variants < 1)) or max_chain_depth < 1:
+            raise ValueError("max_variants must be positive or None; max_chain_depth must be positive")
         self.max_variants = max_variants
         self.max_chain_depth = max_chain_depth
         self.include_parser_cases = include_parser_cases
@@ -229,7 +229,7 @@ class MutationEngine:
                       "provenance_source": probe.provenance_record.source or "unknown",
                       "provenance_revision": probe.provenance_record.revision or ""},
             ))
-            if len(output) >= self.max_variants:
+            if self.max_variants is not None and len(output) >= self.max_variants:
                 break
         return output
 
