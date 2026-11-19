@@ -58,11 +58,13 @@ class ProviderEvaluationPipeline:
                   headers: dict[str, str] | None = None,
                   concurrency: int = 4, max_tokens: int = 256,
                   mutation_profile: str | None = None,
-                  max_mutations_per_probe: int = 16) -> EvaluationResult:
+                  max_mutations_per_probe: int | None = 16) -> EvaluationResult:
         if mutation_profile not in (None, "robustness"):
             raise ValueError("mutation_profile must be None or 'robustness'")
         if max_tokens < 1:
             raise ValueError("max_tokens must be positive")
+        if max_mutations_per_probe is not None and (isinstance(max_mutations_per_probe, bool) or max_mutations_per_probe < 1):
+            raise ValueError("max_mutations_per_probe must be positive or None")
         if bool(provider_name) != bool(model):
             raise ValueError("provider_name and model must be supplied together")
         evaluated = list(probes)
