@@ -15,6 +15,7 @@ def load_source_config(path):
         raise ValueError("sha256 must be 64 hexadecimal characters")
     if data["format"] not in ("json","jsonl","ndjson","yaml","yml"):
         raise ValueError("format must be json, jsonl, ndjson, yaml, or yml")
-    if data.get("expected_field","expected") not in ("expected","label","target"):
-        raise ValueError("expected_field must be expected, label, or target")
+    for key in ("prompt_field","id_field","category_field","expected_field","system_field"):
+        if key in data and (not isinstance(data[key],str) or not data[key].strip()):
+            raise ValueError(f"{key} must be a non-empty string")
     return data
