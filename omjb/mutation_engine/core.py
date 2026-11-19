@@ -33,9 +33,9 @@ class Registry:
         if spec.name in self._specs: raise ValueError(f"duplicate transform: {spec.name}")
         if not isinstance(spec.input_kind,Kind) or not isinstance(spec.output_kind,Kind):
             raise ValueError("transform input_kind and output_kind must be Kind values")
-        if not math.isfinite(spec.cost) or spec.cost<0:
+        if isinstance(spec.cost,bool) or not isinstance(spec.cost,(int,float)) or not math.isfinite(spec.cost) or spec.cost<0:
             raise ValueError("transform cost must be finite and non-negative")
-        if not math.isfinite(spec.semantic_delta) or not 0<=spec.semantic_delta<=1:
+        if isinstance(spec.semantic_delta,bool) or not isinstance(spec.semantic_delta,(int,float)) or not math.isfinite(spec.semantic_delta) or not 0<=spec.semantic_delta<=1:
             raise ValueError("semantic_delta must be finite and between 0 and 1")
         if isinstance(spec.version,bool) or not isinstance(spec.version,int) or spec.version<1:
             raise ValueError("transform version must be a positive integer")
