@@ -73,6 +73,8 @@ class OMJBTests(unittest.TestCase):
             rid=run(EchoTarget(),[Probe("p","test","restricted-marker")],s,"guarded",pipeline=pipeline)
             self.assertEqual(s.get_results(rid)[0]["detector_label"],"output_quarantined")
             self.assertEqual(json.loads(s.get_results(rid)[0]["pipeline_result"])["action"],"block")
+            row=s.get_results(rid)[0]
+            self.assertEqual(s.get_guard_observations(row["id"])[0]["stage"],"output")
             s.close()
     def test_adjudication_join_and_human_bypass_report(self):
         with tempfile.TemporaryDirectory() as tmp:
