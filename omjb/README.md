@@ -8,6 +8,7 @@ Python 3.10+; standard library only for the core package.
 
 ```bash
 python -m unittest discover -s tests -p 'test_omjb.py' -v
+python -m omjb.cli run --suite guardrail-lab --case GL-001 --name existing-lab-smoke --target echo
 python -m omjb.cli run --probes corpus/omjb_probes.json --name offline-check --target echo
 python -m omjb.cli list
 python -m omjb.cli report 1
@@ -37,9 +38,11 @@ Hosted endpoints require HTTPS. Ollama is restricted to localhost or HTTPS. Gene
 
 ## Data and guards
 
-Probe files may be JSON arrays, JSONL records, or YAML lists (YAML requires PyYAML). Each record requires a non-empty prompt and unique ID. Optional provenance is carried as metadata; a record explicitly marked `runnable: false` is rejected by the runner loader.
+Probe files may be JSON arrays, common dictionary-root datasets (including `instructions`, `prompts`, `examples`, or `data`), JSONL/NDJSON, YAML, and gzip/bzip2-compressed variants. Each record requires a non-empty prompt and unique ID. Optional provenance is validated and stored; `--require-provenance` requires source and revision, and `--dedupe` removes duplicate content hashes. A record explicitly marked `runnable: false` is rejected by the runner loader.
 
-Composable keyword, regex and composite guards are available in `omjb.guard`. The CLI exposes keyword review/block controls at input and output stages. A blocked input is not sent to the provider. A blocked output is quarantined in the evidence record and marked for review. A review decision is recorded but does not silently block. These are defensive controls, not jailbreak generation or bypass optimization.
+The `omjb.guardrail_adapter` imports the repository's existing Guardrail Lab cases directly, including the 24 core cases and 52 reviewed source-derived safe adaptations. It preserves case IDs, expected signals, canaries, and source metadata; it does not copy or execute the original-source archive. Run the existing suite through OMJB with `python -m omjb.cli run --suite guardrail-lab --name guardrail-omjb --target echo` (replace Echo with an authorized live provider when ready). The original `python -m modules.guardrail_lab` workflow remains unchanged.
+
+Composable keyword, regex and composite guards are available in `omjb.guard`; ordered stages are configured with `--pipeline-json PATH` or inline JSON. The legacy keyword review/block flags remain supported. A blocked input is not sent to the provider. A blocked output is quarantined in the evidence record and marked for review. A review decision is recorded but does not silently block. These are defensive controls, not jailbreak generation or bypass optimization.
 
 ## Evidence, adjudication and metrics
 
@@ -55,7 +58,7 @@ python -m omjb.cli export RUN_ID --format csv --output reports/run.csv
 python -m omjb.cli export RUN_ID --format report --output reports/summary.json
 ```
 
-`omjb.provenance` provides source SHA-256 manifests. Keep original archive records metadata-only and import only reviewed, inert test adaptations into runnable corpora.
+`omjb.provenance` provides validated source/revision records and stable row hashes. Result rows persist provenance and per-stage pipeline traces; reports stratify adjudicated outcomes by category and source. `omjb.guard_eval.load_labeled` shares the same corpus reader for benign/attack guard datasets. Keep original archive records metadata-only and import only reviewed, inert test adaptations into runnable corpora. `omjb verify MANIFEST.json` checks a materialized corpus against its file-level SHA-256 manifest.
 
 ## Safety and interpretation
 
