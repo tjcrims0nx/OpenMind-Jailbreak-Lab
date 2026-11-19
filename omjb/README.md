@@ -88,8 +88,6 @@ python -m omjb.cli export RUN_ID --format csv --output reports/run.csv
 python -m omjb.cli export RUN_ID --format report --output reports/summary.json
 ```
 
-The `fetch` command requires a JSON source config containing `name`, `url` (HTTPS), `sha256` (the expected 64-character digest), `revision`, `license`, `format`, and `prompt_field`, plus `"reviewed": true` after human confirmation that the source is authorized and safe to make runnable. Optional mapping keys are `id_field`, `category_field`, `expected_field`, and `system_field`. The downloader checks the content hash, validates the probe fields, and emits JSONL plus the existing provenance manifest. It never supplies a source registry or asserts a license independently; the license value is the caller's declaration. Original archive prompts should remain metadata-only unless separately reviewed and converted into safe adaptations.
-
 `omjb.provenance` provides validated source/revision records and stable row hashes. Result rows persist provenance and per-stage pipeline traces; reports stratify adjudicated outcomes by category and source. `omjb.guard_eval.load_labeled` shares the same corpus reader for benign/attack guard datasets. Keep original archive records metadata-only and import only reviewed, inert test adaptations into runnable corpora. `omjb verify MANIFEST.json` checks a materialized corpus against its file-level SHA-256 manifest.
 
 ## Safety and interpretation
