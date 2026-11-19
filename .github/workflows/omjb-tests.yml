@@ -11,6 +11,7 @@ on:
       - "tests/test_async_provider_eval.py"
       - "tests/test_mutations.py"
       - "tests/test_mutation_engine.py"
+      - "tests/test_configurable_capacity.py"
       - "corpus/omjb_probes.json"
       - "pyproject.toml"
       - ".github/workflows/omjb-tests.yml"
