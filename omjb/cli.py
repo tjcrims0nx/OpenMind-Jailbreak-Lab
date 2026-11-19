@@ -22,7 +22,7 @@ def main(argv=None):
     parser.add_argument("--db",default="openmind.db")
     sub=parser.add_subparsers(dest="cmd",required=True)
     sub.add_parser("list")
-    rp=sub.add_parser("run"); rp.add_argument("--probes",required=True); rp.add_argument("--name",required=True)
+    rp=sub.add_parser("run"); rp.add_argument("--probes",default=None); rp.add_argument("--suite",choices=("guardrail-lab",),default=None); rp.add_argument("--case",action="append",default=[]); rp.add_argument("--name",required=True)
     rp.add_argument("--target",choices=("echo","openai","anthropic","ollama","gemini"),required=True)
     rp.add_argument("--base-url"); rp.add_argument("--model",default="gemini-2.5-flash")
     rp.add_argument("--api-key-env"); rp.add_argument("--params",default="{}"); rp.add_argument("--sleep",type=float,default=0)
@@ -52,7 +52,13 @@ def main(argv=None):
             params=json.loads(args.params)
             if not isinstance(params,dict): raise ValueError("--params must be a JSON object")
             target=target_from_env(args.target,args.model,args.base_url,args.api_key_env)
-            probes=load_probes(args.probes,require_provenance=args.require_provenance,dedupe=args.dedupe)
+            if args.suite:
+                from .guardrail_adapter import load_guardrail_lab_cases
+                probes=load_guardrail_lab_cases(args.case or None)
+            elif args.probes:
+                if args.case: raise ValueError("--case is available only with --suite guardrail-lab")
+                probes=load_probes(args.probes,require_provenance=args.require_provenance,dedupe=args.dedupe)
+            else: raise ValueError("provide --probes PATH or --suite guardrail-lab")
             pipeline=_pipeline_spec(args.pipeline_json)
             input_guards=[KeywordGuard(args.input_review_term,decision="review",name="input-review"),KeywordGuard(args.input_block_term,decision="block",name="input-block")]
             output_guards=[KeywordGuard(args.output_review_term,decision="review",name="output-review"),KeywordGuard(args.output_block_term,decision="block",name="output-block")]
