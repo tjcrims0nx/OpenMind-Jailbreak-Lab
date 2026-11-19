@@ -42,7 +42,7 @@ def run(target,probes,store,run_name,params=None,sleep=0.0,progress=None,input_g
             if pr:
                 for stage in pr.stages:
                     decision="block" if stage.action=="block" else "review" if stage.action=="review" else "allow"
-                    store.add_guard_observation(result_id,"output" if stage.stage.startswith("output") else "input",decision,[stage.__dict__])
+                    store.add_guard_observation(result_id,stage.on,decision,[stage.__dict__])
             if progress: progress(index,len(probes),probe)
             if sleep and index<len(probes): time.sleep(sleep)
     finally: store.finish_run(rid)
