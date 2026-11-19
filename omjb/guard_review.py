@@ -6,6 +6,7 @@ reviewer assessments are stored separately from model-response adjudications.
 from __future__ import annotations
 import json
 import time
+from dataclasses import asdict, is_dataclass
 from .stats import wilson_interval
 
 SCHEMA = """
@@ -40,12 +41,17 @@ def persist_evaluation(store, samples, guard, run_name, observations, config=Non
          json.dumps(config or {},sort_keys=True),time.time(),time.time()))
     run_id=cur.lastrowid
     for index,(sample,observation) in enumerate(zip(samples,observations)):
-        findings=getattr(observation,"findings",[])
-        if hasattr(findings,"__iter__") and not isinstance(findings,(str,dict,list)):
-            findings=list(findings)
+        findings=getattr(observation,"findings",None)
+        if findings is None:
+            findings=[observation]
         serialized=[]
-        for finding in findings or []:
-            serialized.append(finding.__dict__ if hasattr(finding,"__dict__") else finding)
+        for finding in findings:
+            if is_dataclass(finding):
+                serialized.append(asdict(finding))
+            elif hasattr(finding,"__dict__"):
+                serialized.append(dict(finding.__dict__))
+            else:
+                serialized.append(finding)
         store.conn.execute(
             """INSERT INTO guard_eval_results
             (run_id,sample_id,category,text,expected_label,decision,findings,provenance,created_at)
@@ -74,7 +80,7 @@ def adjudicate(store, result_id, label, notes="", reviewer=""):
         VALUES(?,?,?,?,?)""",(result_id,reviewer,label,notes,time.time()))
     store.conn.commit()
 
-def summary(store, run_id):
+def summary(store, run_id, reviewer=None):
     ensure_schema(store)
     run=store.conn.execute("SELECT * FROM guard_eval_runs WHERE id=?",(run_id,)).fetchone()
     if not run: raise ValueError(f"unknown guard evaluation run: {run_id}")
@@ -88,9 +94,14 @@ def summary(store, run_id):
         elif actual: fn+=1
         elif predicted: fp+=1
         else: tn+=1
-    reviews=[dict(r) for r in store.conn.execute(
-        """SELECT a.* FROM guard_adjudications a JOIN guard_eval_results r
-        ON r.id=a.result_id WHERE r.run_id=? AND a.label IN ('correct','incorrect')""",(run_id,))]
+    review_sql="""SELECT a.* FROM guard_adjudications a JOIN guard_eval_results r
+        ON r.id=a.result_id WHERE r.run_id=?"""
+    review_params=[run_id]
+    if reviewer is not None:
+        review_sql+=" AND a.reviewer=?"
+        review_params.append(reviewer)
+    all_reviews=[dict(r) for r in store.conn.execute(review_sql,review_params)]
+    reviews=[r for r in all_reviews if r["label"] in ("correct","incorrect")]
     correct=sum(r["label"]=="correct" for r in reviews)
     n=len(reviews)
     return {"run_id":run_id,"name":run["name"],"guard":run["guard_name"],"n":len(rows),
@@ -100,6 +111,8 @@ def summary(store, run_id):
       "accuracy":(tp+tn)/len(rows) if rows else None,
       "recall_wilson_95":wilson_interval(tp,tp+fn),
       "human_review":{"n":n,"correct":correct,"incorrect":sum(r["label"]=="incorrect" for r in reviews),
-                      "unclear":store.conn.execute("SELECT COUNT(*) FROM guard_adjudications a JOIN guard_eval_results r ON r.id=a.result_id WHERE r.run_id=? AND a.label='unclear'",(run_id,)).fetchone()[0],
+                      "unclear":sum(r["label"]=="unclear" for r in all_reviews),
+                      "skip":sum(r["label"]=="skip" for r in all_reviews),
+                      "reviewer":reviewer,
                       "agreement_rate":correct/n if n else None},
       "note":"Human review assesses whether each recorded guard decision is correct; it is not model-response adjudication."}
