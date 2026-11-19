@@ -36,7 +36,7 @@ def main(argv=None):
     rp.add_argument("--require-provenance",action="store_true"); rp.add_argument("--dedupe",action="store_true")
     rp.add_argument("--pipeline-json",default=None,help="pipeline JSON file path or inline JSON object")
     for arg in ("input-review-term","input-block-term","output-review-term","output-block-term"): rp.add_argument("--"+arg,action="append",default=[])
-    rep=sub.add_parser("report"); rep.add_argument("run_id",type=int)
+    rep=sub.add_parser("report"); rep.add_argument("run_id",type=int); rep.add_argument("--reviewer",default=None)
     diff=sub.add_parser("regress"); diff.add_argument("baseline",type=int); diff.add_argument("candidate",type=int)
     adj=sub.add_parser("adjudicate"); adj.add_argument("run_id",type=int); adj.add_argument("--reviewer",default="")
     exp=sub.add_parser("export"); exp.add_argument("run_id",type=int); exp.add_argument("--format",choices=("jsonl","csv","report"),required=True); exp.add_argument("--output",required=True)
@@ -48,7 +48,7 @@ def main(argv=None):
     ga=sub.add_parser("guard-adjudicate",help="human-review recorded guard decisions")
     ga.add_argument("run_id",type=int); ga.add_argument("--reviewer",default="")
     gr=sub.add_parser("guard-report",help="report standalone guard evaluation and human review")
-    gr.add_argument("run_id",type=int)
+    gr.add_argument("run_id",type=int); gr.add_argument("--reviewer",default=None)
     ft=sub.add_parser("fetch",help="download a SHA-256-pinned, licensed corpus source")
     ft.add_argument("--source-config",required=True); ft.add_argument("--output",required=True)
     vf=sub.add_parser("verify",help="verify a corpus file against a JSON manifest"); vf.add_argument("manifest")
@@ -86,13 +86,13 @@ def main(argv=None):
                 input_guards=input_guards if legacy and pipeline is None else (),
                 output_guards=output_guards if legacy and pipeline is None else (),pipeline=pipeline)
             print(json.dumps(summarize(store,rid),indent=2))
-        elif args.cmd=="report": print(json.dumps(summarize(store,args.run_id),indent=2))
+        elif args.cmd=="report": print(json.dumps(summarize(store,args.run_id,reviewer=args.reviewer),indent=2))
         elif args.cmd=="regress": print(json.dumps(regress(store,args.baseline,args.candidate),indent=2))
         elif args.cmd=="export":
             if args.include_adjudication or args.adjudicated_only:
                 rows=store.get_results_with_adjudication(args.run_id,reviewer=args.reviewer)
                 if args.adjudicated_only: rows=[r for r in rows if r["adj_label"]]
-                if args.format=="report": count=export_report(store,args.run_id,args.output)
+                if args.format=="report": count=export_report(store,args.run_id,args.output,reviewer=args.reviewer)
                 elif args.format=="jsonl":
                     with open(args.output,"w",encoding="utf-8") as f:
                         for row in rows: f.write(json.dumps(row,ensure_ascii=False,sort_keys=True)+"\n")
@@ -104,12 +104,13 @@ def main(argv=None):
                         w=csv.DictWriter(f,fieldnames=fields,extrasaction="ignore"); w.writeheader(); w.writerows(rows)
                     count=len(rows)
             else:
-                count={"jsonl":export_jsonl,"csv":export_csv,"report":export_report}[args.format](store,args.run_id,args.output)
+                count=export_report(store,args.run_id,args.output,reviewer=args.reviewer) if args.format=="report" else {"jsonl":export_jsonl,"csv":export_csv}[args.format](store,args.run_id,args.output)
             if count is not None: print(json.dumps({"exported":count,"path":args.output}))
         elif args.cmd=="guard-evaluate":
             from .guard_eval import load_labeled,evaluate
             from .guard import evaluate_guards
             samples=load_labeled(args.corpus,require_provenance=args.require_provenance,dedupe=args.dedupe)
+            if not (args.review_term or args.block_term): raise ValueError("provide at least one --review-term or --block-term")
             guards=[]
             if args.review_term: guards.append(KeywordGuard(args.review_term,decision="review",name="review"))
             if args.block_term: guards.append(KeywordGuard(args.block_term,decision="block",name="block"))
@@ -128,7 +129,7 @@ def main(argv=None):
                 adjudicate(store,row["id"],label,notes,reviewer=args.reviewer)
         elif args.cmd=="guard-report":
             from .guard_review import summary as guard_summary
-            print(json.dumps(guard_summary(store,args.run_id),indent=2))
+            print(json.dumps(guard_summary(store,args.run_id,reviewer=args.reviewer),indent=2))
         elif args.cmd=="adjudicate":
             for row in store.unadjudicated(args.run_id,reviewer=args.reviewer):
                 print("\n"+"="*60+"\n",row["probe_id"],row["detector_label"],row["detector_reason"])
