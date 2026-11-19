@@ -256,7 +256,8 @@ class CampaignTests(unittest.TestCase):
             lambda messages: "untrusted", provider="mock",
             budget=None, max_build_attempts=None, max_seconds=10,
             max_usd=0.10, estimated_cost_per_request=0.01,
-            adaptive=False, case_ids=["GL-001", "GL-002"],
+            adaptive=False, delay_seconds=0.001,
+            case_ids=["GL-001", "GL-002"],
         )
         self.assertIsNone(report["campaign"]["max_candidates"])
         self.assertIsNone(report["campaign"]["max_build_attempts"])
