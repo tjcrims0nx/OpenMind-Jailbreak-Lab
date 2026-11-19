@@ -18,7 +18,7 @@ def load_guardrail_lab_cases(case_ids=None):
         revision=case.source_sha256 or suite_version
         prov=ProvenanceRecord(source=source,revision=revision,
             upstream_uri=case.source_path or "repository:modules/guardrail_lab/cases.py",
-            license="repository-license")
+            license="")
         meta={"suite":"Guardrail Lab","suite_version":suite_version,
             "expected_signal":case.expected_signal,"canary":case.canary,
             "control":case.control,"source_id":case.source_id,
