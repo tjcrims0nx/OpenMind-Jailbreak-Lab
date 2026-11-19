@@ -123,7 +123,7 @@ class OMJBTests(unittest.TestCase):
             write_corpus(rows,str(path))
             manifest=str(path)+".manifest.json"
             self.assertTrue(verify_manifest(manifest)["ok"])
-            path.write_text(path.read_text()+"\\n")
+            path.write_text(path.read_text()+"\n")
             self.assertFalse(verify_manifest(manifest)["ok"])
     def test_labeled_dict_root(self):
         with tempfile.TemporaryDirectory() as tmp:
