@@ -3,7 +3,7 @@ from __future__ import annotations
 import time,json
 from dataclasses import dataclass,field
 from .targets import Message
-from .guard import KeywordGuard,RegexGuard,CompositeGuard
+from .guard import KeywordGuard,RegexGuard,CompositeGuard,GuardFinding
 
 @dataclass
 class StageResult:
@@ -40,7 +40,7 @@ class ModelGuard:
             confidence=0.5; reason="non-JSON judge response; conservative low-confidence triage"
         if not 0<=confidence<=1: raise ValueError("judge confidence outside 0..1")
         decision="review" if label=="suspicious" and confidence>=self.threshold else "allow"
-        return type("Finding",(),{"decision":decision,"reason":reason})()
+        return GuardFinding(self.name,decision,reason)
 
 class GuardPipeline:
     def __init__(self,stages,name="pipeline"):
