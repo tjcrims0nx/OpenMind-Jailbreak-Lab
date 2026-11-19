@@ -8,12 +8,20 @@ Python 3.10+; standard library only for the core package.
 
 ```bash
 python -m unittest discover -s tests -p 'test_omjb.py' -v
+python -m unittest discover -s tests -p 'test_guard_review.py' -v
+python -m unittest discover -s tests -p 'test_downloaders.py' -v
 python -m omjb.cli run --suite guardrail-lab --case GL-001 --name existing-lab-smoke --target echo
 python -m omjb.cli run --probes corpus/omjb_probes.json --name offline-check --target echo
 python -m omjb.cli list
 python -m omjb.cli report 1
-python -m omjb.cli adjudicate 1
+python -m omjb.cli adjudicate 1 --reviewer reviewer-1
+python -m omjb.cli report 1 --reviewer reviewer-1
 python -m omjb.cli regress 1 2
+python -m omjb.cli guard-evaluate --corpus guard_samples.jsonl --name local-keyword-check --block-term "test marker"
+python -m omjb.cli guard-adjudicate 1 --reviewer reviewer-1
+python -m omjb.cli guard-report 1 --reviewer reviewer-1
+python -m omjb.cli fetch --source-config source.json --output corpus/fetched.jsonl
+python -m omjb.cli verify corpus/fetched.jsonl.manifest.json
 python -m omjb.cli export 1 --format jsonl --output reports/run.jsonl
 ```
 
@@ -66,7 +74,9 @@ The `fetch` command downloads only a caller-configured HTTPS source with an expl
 
 ## Evidence, adjudication and metrics
 
-SQLite stores run configuration without API keys, prompts, responses, response SHA-256 digests, heuristic triage, guard observations and human adjudications. Existing databases are upgraded additively; tables are not dropped. Manual labels are stored separately from model/heuristic labels.
+SQLite stores run configuration without API keys, prompts, responses, response SHA-256 digests, heuristic triage, guard observations and human adjudications. Existing databases are upgraded additively; tables are not dropped. Model reviewers can work independently using `adjudicate RUN_ID --reviewer NAME`; `report RUN_ID --reviewer NAME` and adjudication exports can be scoped to that reviewer. Existing calls without a reviewer retain the original shared-queue behavior.
+
+Standalone guard evaluation persists separate `guard_eval_runs`, `guard_eval_results`, and `guard_adjudications` records. Guard labels are deliberately distinct: corpus truth is `benign/attack`, predictions are `allow/review/block`, and human assessments are `correct/incorrect/unclear/skip`. Use `guard-evaluate` with one or more `--review-term` or `--block-term` values, then `guard-adjudicate` and `guard-report`. Add `--reviewer NAME` to review and report a particular reviewer. The report separates corpus-based confusion metrics from human assessments; it does not combine guard results with model-response adjudications.
 
 Reports show heuristic signals separately from adjudication-based precision, recall, F1 and Wilson confidence intervals. Only adjudicated refusal/compliance pairs are scored; partial, unclear, skip and unreviewed records are excluded. Regression compares stable probe IDs and reports added/removed cases.
 
@@ -77,6 +87,8 @@ python -m omjb.cli export RUN_ID --format jsonl --output reports/run.jsonl
 python -m omjb.cli export RUN_ID --format csv --output reports/run.csv
 python -m omjb.cli export RUN_ID --format report --output reports/summary.json
 ```
+
+The `fetch` command requires a JSON source config containing `name`, `url` (HTTPS), `sha256` (the expected 64-character digest), `revision`, `license`, `format`, and `prompt_field`, plus `"reviewed": true` after human confirmation that the source is authorized and safe to make runnable. Optional mapping keys are `id_field`, `category_field`, `expected_field`, and `system_field`. The downloader checks the content hash, validates the probe fields, and emits JSONL plus the existing provenance manifest. It never supplies a source registry or asserts a license independently; the license value is the caller's declaration. Original archive prompts should remain metadata-only unless separately reviewed and converted into safe adaptations.
 
 `omjb.provenance` provides validated source/revision records and stable row hashes. Result rows persist provenance and per-stage pipeline traces; reports stratify adjudicated outcomes by category and source. `omjb.guard_eval.load_labeled` shares the same corpus reader for benign/attack guard datasets. Keep original archive records metadata-only and import only reviewed, inert test adaptations into runnable corpora. `omjb verify MANIFEST.json` checks a materialized corpus against its file-level SHA-256 manifest.
 
