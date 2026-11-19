@@ -14,6 +14,7 @@ class Store:
         self.conn.executescript(SCHEMA)
         self._ensure_column("results","pipeline_result","TEXT")
         self._ensure_column("results","provenance","TEXT")
+        self._ensure_column("adjudications","reviewer","TEXT NOT NULL DEFAULT ''")
         self.conn.commit()
     def _ensure_column(self,table,column,definition):
         cols={r["name"] for r in self.conn.execute(f"PRAGMA table_info({table})")}
@@ -49,15 +50,32 @@ class Store:
         return [dict(x) for x in self.conn.execute("""SELECT r.*,a.label AS adjudicated_label,a.notes AS adjudication_notes,a.adjudicated_at
             FROM results r JOIN adjudications a ON a.result_id=r.id
             WHERE r.run_id=? AND a.id=(SELECT MAX(a2.id) FROM adjudications a2 WHERE a2.result_id=r.id) ORDER BY r.id""",(rid,))]
-    def get_results_with_adjudication(self,rid):
-        return [dict(x) for x in self.conn.execute("""SELECT r.*,a.label AS adj_label,a.notes AS adj_notes,a.adjudicated_at AS adj_at
-            FROM results r LEFT JOIN adjudications a ON a.result_id=r.id
-            AND a.id=(SELECT MAX(a2.id) FROM adjudications a2 WHERE a2.result_id=r.id)
-            WHERE r.run_id=? ORDER BY r.id""",(rid,))]
+    def get_results_with_adjudication(self,rid,reviewer=None):
+        if reviewer is None:
+            query="""SELECT r.*,a.label AS adj_label,a.notes AS adj_notes,a.adjudicated_at AS adj_at,a.reviewer AS adj_reviewer
+                FROM results r LEFT JOIN adjudications a ON a.result_id=r.id
+                AND a.id=(SELECT MAX(a2.id) FROM adjudications a2 WHERE a2.result_id=r.id)
+                WHERE r.run_id=? ORDER BY r.id"""
+            params=(rid,)
+        else:
+            query="""SELECT r.*,a.label AS adj_label,a.notes AS adj_notes,a.adjudicated_at AS adj_at,a.reviewer AS adj_reviewer
+                FROM results r LEFT JOIN adjudications a ON a.result_id=r.id AND a.reviewer=?
+                AND a.id=(SELECT MAX(a2.id) FROM adjudications a2 WHERE a2.result_id=r.id AND a2.reviewer=?)
+                WHERE r.run_id=? ORDER BY r.id"""
+            params=(reviewer,reviewer,rid)
+        return [dict(x) for x in self.conn.execute(query,params)]
     def list_runs(self):
         return [dict(x) for x in self.conn.execute("SELECT * FROM runs ORDER BY id")]
-    def add_adjudication(self,result_id,label,notes=""):
+    def add_adjudication(self,result_id,label,notes="",reviewer=""):
         if label not in ("refusal","compliance","partial","unclear","skip"): raise ValueError("invalid adjudication label")
-        self.conn.execute("INSERT INTO adjudications(result_id,label,notes,adjudicated_at) VALUES(?,?,?,?)",(result_id,label,notes,time.time())); self.conn.commit()
-    def unadjudicated(self,rid):
-        return [dict(x) for x in self.conn.execute("""SELECT r.* FROM results r LEFT JOIN adjudications a ON a.result_id=r.id WHERE r.run_id=? AND a.id IS NULL ORDER BY r.id""",(rid,))]
+        self.conn.execute("INSERT INTO adjudications(result_id,label,notes,reviewer,adjudicated_at) VALUES(?,?,?,?,?)",(result_id,label,notes,reviewer,time.time())); self.conn.commit()
+    def unadjudicated(self,rid,reviewer=None):
+        if reviewer is None:
+            query="""SELECT r.* FROM results r LEFT JOIN adjudications a ON a.result_id=r.id
+                WHERE r.run_id=? AND a.id IS NULL ORDER BY r.id"""
+            params=(rid,)
+        else:
+            query="""SELECT r.* FROM results r WHERE r.run_id=? AND NOT EXISTS
+                (SELECT 1 FROM adjudications a WHERE a.result_id=r.id AND a.reviewer=?) ORDER BY r.id"""
+            params=(rid,reviewer)
+        return [dict(x) for x in self.conn.execute(query,params)]
