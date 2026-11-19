@@ -18,11 +18,14 @@ def _canonical(value: Dict) -> bytes:
 
 def campaign_test_key(case_id: str, variant: str, frame_set_hash: str,
                       frame_variant: Optional[str] = None,
-                      shape_variant: Optional[str] = None) -> str:
+                      shape_variant: Optional[str] = None,
+                      provider: Optional[str] = None,
+                      model: Optional[str] = None) -> str:
     """Stable identity for one case/variant under a frozen framing set."""
     payload = {"case_id": case_id, "variant": variant,
                "frame_set_hash": frame_set_hash,
-               "frame_variant": frame_variant, "shape_variant": shape_variant}
+               "frame_variant": frame_variant, "shape_variant": shape_variant,
+               "provider": provider, "model": model}
     return hashlib.sha256(_canonical(payload)).hexdigest()
 
 
@@ -131,6 +134,7 @@ class CampaignHistoryStore:
             }
         return {
             "attempted_test_keys": {e["test_key"] for e in results.values()},
+            "results_by_test_key": {e["test_key"]: e["result"] for e in results.values()},
             "reviewed_by_test_key": reviewed,
             "result_count": len(results),
             "review_count": len(reviews),
@@ -141,3 +145,41 @@ class CampaignHistoryStore:
         reviewed_ids = {e["record_id"] for e in events if e.get("event_type") == "review"}
         return [e for e in events if e.get("event_type") == "result"
                 and e["record_id"] not in reviewed_ids]
+
+
+def main(argv=None) -> int:
+    """Small review CLI; review decisions are explicit and append-only."""
+    import argparse
+    parser = argparse.ArgumentParser(description="Inspect and review campaign history")
+    parser.add_argument("--history", required=True, help="JSONL history path")
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("pending", help="List pending result record IDs")
+    review = sub.add_parser("review", help="Record a human review")
+    review.add_argument("--record-id", required=True)
+    review.add_argument("--reviewer", required=True)
+    review.add_argument("--decision", required=True,
+                        choices=("approved", "rejected", "inconclusive"))
+    review.add_argument("--notes", required=True)
+    args = parser.parse_args(argv)
+    store = CampaignHistoryStore(args.history)
+    if args.command == "pending":
+        for item in store.list_pending():
+            print(json.dumps({
+                "record_id": item["record_id"],
+                "test_key": item["test_key"],
+                "case_id": item["result"].get("case_id"),
+                "variant": item["result"].get("variant"),
+                "assessment": item["result"].get("assessment"),
+            }, ensure_ascii=False))
+    else:
+        event = store.record_review(
+            record_id=args.record_id, reviewer=args.reviewer,
+            decision=args.decision, notes=args.notes,
+        )
+        print(json.dumps({"record_id": event["record_id"],
+                          "decision": event["decision"]}))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
