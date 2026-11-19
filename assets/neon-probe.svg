@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" role="img" aria-labelledby="title desc">
+  <title id="title">OpenMind neon security probe animation</title>
+  <desc id="desc">A neon network map with moving data packets and a scanning reticle probing a shield-shaped test target.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#050816"/><stop offset=".55" stop-color="#0b1026"/><stop offset="1" stop-color="#160b28"/></linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#00f5ff"/><stop offset="1" stop-color="#4d8dff"/></linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff3bd4"/><stop offset="1" stop-color="#9b5cff"/></linearGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M36 0H0V36" fill="none" stroke="#18304a" stroke-width="1" opacity=".5"/></pattern>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="soft" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="12"/></filter>
+    <path id="routeA" d="M80 245 C230 245 220 95 385 95 S560 255 690 170 S880 75 1110 115" fill="none"/>
+    <path id="routeB" d="M105 80 C260 80 280 270 450 270 S650 70 805 115 S960 265 1100 245" fill="none"/>
+  </defs>
+  <rect width="1200" height="340" rx="18" fill="url(#bg)"/>
+  <rect width="1200" height="340" rx="18" fill="url(#grid)" opacity=".8"/>
+  <path d="M0 275H1200" stroke="#17334a" opacity=".5"/>
+  <g fill="none" stroke="#173b59" stroke-width="1.5" opacity=".85"><use href="#routeA"/><use href="#routeB"/><path d="M600 0V340M0 170H1200" stroke-dasharray="3 9"/></g>
+  <g fill="none" stroke="url(#cyan)" stroke-width="2" opacity=".9" filter="url(#glow)"><use href="#routeA" stroke-dasharray="2 14"/><use href="#routeB" stroke-dasharray="2 18"/></g>
+  <g fill="#00f5ff" filter="url(#glow)"><circle r="4"><animateMotion dur="5s" repeatCount="indefinite"><mpath href="#routeA"/></animateMotion></circle><circle r="3"><animateMotion dur="7s" begin="-2s" repeatCount="indefinite"><mpath href="#routeB"/></animateMotion></circle><circle r="3"><animateMotion dur="6s" begin="-3s" repeatCount="indefinite"><mpath href="#routeA"/></animateMotion></circle></g>
+  <g fill="#ff48d7" filter="url(#glow)"><circle r="3"><animateMotion dur="8s" begin="-4s" repeatCount="indefinite"><mpath href="#routeB"/></animateMotion></circle><circle r="2.5"><animateMotion dur="6.5s" begin="-1s" repeatCount="indefinite"><mpath href="#routeA"/></animateMotion></circle></g>
+  <g transform="translate(600 170)" fill="none" stroke="#00eaff" filter="url(#glow)">
+    <circle r="82" stroke-width="1.2" opacity=".45"><animate attributeName="r" values="72;92;72" dur="3.2s" repeatCount="indefinite"/></circle>
+    <circle r="62" stroke-width="1.5" stroke-dasharray="5 9"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="18s" repeatCount="indefinite"/></circle>
+    <circle r="42" stroke-width="1" opacity=".65"/>
+    <path d="M-104 0H104M0 -104V104" stroke-width="1" opacity=".4"/>
+    <path d="M-16 -34 L0 -44 L16 -34 L30 -30 L28 2 Q23 29 0 43 Q-23 29 -28 2 L-30 -30Z" stroke="url(#pink)" stroke-width="3" fill="#12112c" fill-opacity=".9"/>
+    <path d="M-11 0L-2 10L15 -12" stroke="#9effc8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g transform="translate(600 170)" fill="none" stroke="#ff43d4" stroke-width="2" filter="url(#glow)">
+    <circle r="110" stroke-dasharray="2 14" opacity=".6"><animateTransform attributeName="transform" type="rotate" from="360" to="0" dur="24s" repeatCount="indefinite"/></circle>
+    <path d="M-126 -14H-94M94 -14H126M-14 -126V-94M-14 94V126" opacity=".85"/>
+    <g><animateTransform attributeName="transform" type="rotate" from="-40" to="320" dur="4s" repeatCount="indefinite"/><path d="M0 -126V-94" stroke-width="4"/><path d="M-5 -126H5" stroke-width="3"/></g>
+  </g>
+  <g fill="#8ca6c7" font-family="monospace" font-size="11" opacity=".9"><text x="42" y="42">OMJB // SECURITY RESEARCH NODE</text><text x="42" y="62" fill="#00eaff">PROBE STATUS: ACTIVE</text><text x="930" y="42">NETWORK / TELEMETRY</text><text x="930" y="62" fill="#ff55db">TRACE STREAM: LIVE</text><text x="42" y="310">BOUNDED TESTING  •  REPRODUCIBLE EVIDENCE  •  HUMAN REVIEW</text><text x="1010" y="310">[ SCAN ]</text></g>
+  <g opacity=".5"><rect x="25" y="88" width="3" height="160" fill="#00eaff"><animate attributeName="opacity" values=".15;1;.15" dur="2s" repeatCount="indefinite"/></rect><rect x="1172" y="88" width="3" height="160" fill="#ff43d4"><animate attributeName="opacity" values="1;.15;1" dur="2.5s" repeatCount="indefinite"/></rect></g>
+  <rect x="0" y="0" width="1200" height="340" rx="18" fill="none" stroke="#1b6680" stroke-width="2" opacity=".8"/>
+</svg>
