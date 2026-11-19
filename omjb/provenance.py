@@ -1,32 +1,22 @@
-"""Source provenance helpers for imported evaluation records."""
+"""Validated source provenance and stable content hashing."""
 from __future__ import annotations
-import hashlib, json
-from dataclasses import asdict, dataclass
-from pathlib import Path
+import hashlib,json
+from dataclasses import asdict,dataclass
 
 @dataclass(frozen=True)
-class Provenance:
-    source: str
-    source_id: str = ""
-    source_path: str = ""
-    source_sha256: str = ""
-    license: str = ""
-    imported_at: str = ""
-    runnable: bool = True
+class ProvenanceRecord:
+    source:str=""; revision:str=""; upstream_uri:str=""; fetched_at:float=0.0
+    license:str=""; author:str=""; date:str=""; notes:str=""
+    @classmethod
+    def from_dict(cls,data=None):
+        data=data or {}
+        if not isinstance(data,dict): raise ValueError("provenance must be an object")
+        return cls(**{k:data.get(k,getattr(cls(),k)) for k in cls.__dataclass_fields__})
+    def validate(self,where=""):
+        missing=[k for k in ("source","revision") if not getattr(self,k)]
+        if missing: raise ValueError(f"provenance at {where or '<unknown>'}: missing {missing}")
+    def to_dict(self): return asdict(self)
 
-def sha256_file(path: str | Path) -> str:
-    digest=hashlib.sha256()
-    with open(path,"rb") as f:
-        for chunk in iter(lambda:f.read(1024*1024),b""): digest.update(chunk)
-    return digest.hexdigest()
-
-def manifest_for(path: str | Path, *, source: str, license: str = "", source_id: str = "") -> dict:
-    p=Path(path)
-    return asdict(Provenance(source=source,source_id=source_id,source_path=str(p),
-        source_sha256=sha256_file(p),license=license))
-
-def write_manifest(path: str | Path, manifest: dict) -> None:
-    required={"source","source_id","source_path","source_sha256","license","imported_at","runnable"}
-    if set(manifest) != required: raise ValueError("provenance manifest fields do not match schema")
-    if len(manifest["source_sha256"]) != 64: raise ValueError("invalid source SHA-256")
-    Path(path).write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+def row_sha256(record):
+    content={k:v for k,v in record.items() if k not in ("provenance","provenance_record","id")}
+    return hashlib.sha256(json.dumps(content,sort_keys=True,ensure_ascii=False,default=str).encode()).hexdigest()
