@@ -12,8 +12,12 @@ from .export import export_jsonl,export_csv,export_report
 
 def _pipeline_spec(spec):
     if not spec: return None
-    path=Path(spec)
-    cfg=json.loads(path.read_text(encoding="utf-8")) if path.is_file() else json.loads(spec)
+    if spec.lstrip().startswith("{"):
+        cfg=json.loads(spec)
+    else:
+        path=Path(spec)
+        if not path.is_file(): raise ValueError(f"pipeline config file not found: {spec}")
+        cfg=json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(cfg,dict) or not isinstance(cfg.get("stages",[]),list): raise ValueError("pipeline JSON must be an object with a stages list")
     return pipeline_from_config(cfg)
 
