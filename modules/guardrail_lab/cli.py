@@ -58,6 +58,8 @@ def main(argv=None):
     parser.add_argument("--source-corpus", action="store_true", help="Run all 52 source-derived safe adaptations (combine with --case to add individual cases).")
     parser.add_argument("--list", action="store_true", help="List cases without making API calls")
     parser.add_argument("--campaign", action="store_true", help="Run an automated, bounded adaptive campaign")
+    parser.add_argument("--history", default=None,
+                        help="Optional append-only JSONL campaign history; skips prior coverage and enables review-gated follow-ups")
     parser.add_argument("--research-mode", action="store_true", help="Enable the bounded adversarial research workflow: six reviewed framings, evidence-triggered follow-ups, and manual-review evidence. Does not generate unrestricted bypass payloads.")
     parser.add_argument("--budget", type=int, default=36, help="Maximum test requests (1-1000; default: 36); provider retries may add HTTP attempts")
     parser.add_argument("--unbounded-counts", action="store_true",
@@ -164,6 +166,7 @@ def main(argv=None):
                 estimated_cost_per_request=args.estimated_cost_per_request,
                 adaptive=not args.no_adaptive, delay_seconds=args.delay,
                 max_seconds=args.max_seconds, case_ids=selected_case_ids,
+                history_path=args.history,
             )
             report.setdefault("provenance", {}).update(run_config.evidence_block())
         else:
