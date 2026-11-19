@@ -214,8 +214,8 @@ def run_campaign(
             (case, index) for case, index in queue
             if campaign_test_key(
                 case.case_id, VARIANTS[index][0], FRAME_SET_HASH,
-                _frame_annotation(selected_cases.index(case) * variants + index, shape_variant=shape_variant)["frame_variant"] if frame_variant is None else frame_variant,
-                _frame_annotation(selected_cases.index(case) * variants + index, shape_variant=shape_variant)["shape_variant"],
+                _frame_annotation(CASES.index(case) * len(VARIANTS) + index, shape_variant=shape_variant)["frame_variant"] if frame_variant is None else frame_variant,
+                _frame_annotation(CASES.index(case) * len(VARIANTS) + index, shape_variant=shape_variant)["shape_variant"],
                 provider, model,
             ) not in attempted_keys
         ]
@@ -226,8 +226,9 @@ def run_campaign(
     if history_store:
         prior_gl009_key = campaign_test_key(
             "GL-009", VARIANTS[0][0], FRAME_SET_HASH,
-            _frame_annotation(0)["frame_variant"],
-            _frame_annotation(0)["shape_variant"], provider, model,
+            _frame_annotation(CASES.index(next(c for c in CASES if c.case_id == "GL-009")) * len(VARIANTS))["frame_variant"],
+            _frame_annotation(CASES.index(next(c for c in CASES if c.case_id == "GL-009")) * len(VARIANTS))["shape_variant"],
+            provider, model,
         )
         prior_gl009 = history_snapshot["results_by_test_key"].get(prior_gl009_key)
         if prior_gl009 and prior_gl009.get("response") is not None:
@@ -275,7 +276,7 @@ def run_campaign(
         record["attempt"] = len(results) + 1
         record["estimated_cost_usd"] = estimated_cost_per_request or 0.0
         estimated_spend_usd += estimated_cost_per_request or 0.0
-        frame_index = selected_cases.index(case) * variants + variant_index
+        frame_index = CASES.index(case) * len(VARIANTS) + variant_index
         if annotate_frames:
             record.update(_frame_annotation(
                 frame_index,
