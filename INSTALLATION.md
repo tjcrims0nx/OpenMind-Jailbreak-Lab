@@ -102,7 +102,7 @@ Verify the environment:
 python --version
 ```
 
-No additional packages need to be installed for the current standard-library implementation.
+The repository's existing root-level tools use the Python standard library. The integrated OMJB package can also be installed as an editable package; see [OMJB installation and operator guide](omjb/INSTALLATION.md) for its CLI, optional YAML extra, provider setup, and corpus workflows.
 
 ---
 
@@ -727,6 +727,28 @@ python -m unittest discover -s tests -v
 Review the failing test and traceback before changing project files.
 
 ---
+
+## OMJB evaluation harness (integrated package)
+
+The repository now includes the additive `omjb` package. It can run external corpora or the existing Guardrail Lab suite directly, while preserving the original Guardrail Lab CLI and the other repository tools.
+
+From the repository root, with Python 3.10 or newer:
+
+```bash
+python -m venv .venv
+# macOS/Linux: source .venv/bin/activate
+# Windows PowerShell: .venv\\Scripts\\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e .
+# Optional YAML input support:
+python -m pip install -e '.[yaml]'
+
+python -m unittest discover -s tests -p 'test_omjb.py' -v
+python -m omjb.cli list
+python -m omjb.cli run --suite guardrail-lab --case GL-001 --name install-smoke --target echo
+```
+
+The core package has no required runtime dependencies; JSON/JSONL and compressed JSON inputs work without extras. Editable installation exposes the `omjb` console script. The offline Echo target verifies the runner without API credentials. For complete instructions covering live providers, environment variables, corpus formats, provenance, guard pipelines, human adjudication, reports, and regression, see [omjb/INSTALLATION.md](omjb/INSTALLATION.md).
 
 ## 14. Security and responsible use
 
