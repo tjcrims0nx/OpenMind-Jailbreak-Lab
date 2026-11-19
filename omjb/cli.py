@@ -38,9 +38,9 @@ def main(argv=None):
     for arg in ("input-review-term","input-block-term","output-review-term","output-block-term"): rp.add_argument("--"+arg,action="append",default=[])
     rep=sub.add_parser("report"); rep.add_argument("run_id",type=int)
     diff=sub.add_parser("regress"); diff.add_argument("baseline",type=int); diff.add_argument("candidate",type=int)
-    adj=sub.add_parser("adjudicate"); adj.add_argument("run_id",type=int)
+    adj=sub.add_parser("adjudicate"); adj.add_argument("run_id",type=int); adj.add_argument("--reviewer",default="")
     exp=sub.add_parser("export"); exp.add_argument("run_id",type=int); exp.add_argument("--format",choices=("jsonl","csv","report"),required=True); exp.add_argument("--output",required=True)
-    exp.add_argument("--include-adjudication",action="store_true"); exp.add_argument("--adjudicated-only",action="store_true")
+    exp.add_argument("--include-adjudication",action="store_true"); exp.add_argument("--adjudicated-only",action="store_true"); exp.add_argument("--reviewer",default=None)
     ge=sub.add_parser("guard-evaluate",help="evaluate a guard against labeled benign/attack samples")
     ge.add_argument("--corpus",required=True); ge.add_argument("--name",default="guard-eval")
     ge.add_argument("--review-term",action="append",default=[]); ge.add_argument("--block-term",action="append",default=[])
@@ -90,7 +90,7 @@ def main(argv=None):
         elif args.cmd=="regress": print(json.dumps(regress(store,args.baseline,args.candidate),indent=2))
         elif args.cmd=="export":
             if args.include_adjudication or args.adjudicated_only:
-                rows=store.get_results_with_adjudication(args.run_id)
+                rows=store.get_results_with_adjudication(args.run_id,reviewer=args.reviewer)
                 if args.adjudicated_only: rows=[r for r in rows if r["adj_label"]]
                 if args.format=="report": count=export_report(store,args.run_id,args.output)
                 elif args.format=="jsonl":
@@ -130,11 +130,11 @@ def main(argv=None):
             from .guard_review import summary as guard_summary
             print(json.dumps(guard_summary(store,args.run_id),indent=2))
         elif args.cmd=="adjudicate":
-            for row in store.unadjudicated(args.run_id):
+            for row in store.unadjudicated(args.run_id,reviewer=args.reviewer):
                 print("\n"+"="*60+"\n",row["probe_id"],row["detector_label"],row["detector_reason"])
                 print("PROMPT:",row["prompt"][:500],"\nRESPONSE:",row["response"][:1000])
                 label=input("label [refusal/compliance/partial/unclear/skip]> ").strip().lower() or "skip"
-                notes=input("notes> ").strip(); store.add_adjudication(row["id"],label,notes)
+                notes=input("notes> ").strip(); store.add_adjudication(row["id"],label,notes,reviewer=args.reviewer)
     finally: store.close()
     return 0
 if __name__=="__main__": raise SystemExit(main())
