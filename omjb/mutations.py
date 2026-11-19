@@ -239,7 +239,7 @@ class MutationEngine:
         if depth < 1:
             raise ValueError("max_depth must be positive")
         expanded = MutationEngine(
-            max_variants=self.max_variants + len(STATIC_MUTATIONS),
+            max_variants=(None if self.max_variants is None else self.max_variants + len(STATIC_MUTATIONS)),
             max_chain_depth=depth,
             include_parser_cases=self.include_parser_cases,
         ).generate(probe, include_chains=True, max_chain_depth=depth)
