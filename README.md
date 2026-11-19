@@ -164,3 +164,25 @@ For an offline demonstration: `python -m modules.guardrail_lab.demo --output rep
 ## Status and license
 
 OpenMind is experimental software, not a certification. Provider behavior changes and not every configuration has been live-tested. Check [release status](RELEASE_STATUS.md) for CI and release gates, and [LICENSE](LICENSE) for terms.
+
+
+## OMJB evaluation harness
+
+The additive `omjb` package provides a second, reusable evaluation interface without replacing Guardrail Lab, the 76-case suite, the benchmark, scanner, or manual-review workspace. It includes Echo, OpenAI-compatible, Anthropic, Gemini, and Ollama targets; JSON/JSONL and optional YAML probe loading; defensive keyword/regex/composite guards; sequential guarded execution; SQLite evidence and guard observations; provenance manifests; human adjudication; Wilson intervals and adjudication-only classification metrics; regression comparisons; and JSONL/CSV/report exports.
+
+Quick offline check:
+
+```bash
+python -m unittest tests.test_omjb -v
+python -m omjb.cli run --probes corpus/omjb_probes.json --name local-check --target echo
+python -m omjb.cli report 1
+```
+
+Gemini example (key stays in the environment):
+
+```bash
+export GEMINI_API_KEY="YOUR_API_KEY"
+python -m omjb.cli run --probes corpus/omjb_probes.json --name gemini-check --target gemini --model gemini-2.5-flash
+```
+
+Optional defensive checks can be configured with repeated `--input-review-term`, `--input-block-term`, `--output-review-term`, and `--output-block-term` flags. Review findings do not automatically block; block decisions prevent an input from being sent or quarantine a returned output. Exports: `python -m omjb.cli export RUN_ID --format jsonl|csv|report --output PATH`. YAML requires `pip install '.[yaml]'`. API credentials are not written to run configuration. All tests are bounded and intended for systems you own or are authorized to assess.
