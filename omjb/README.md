@@ -58,6 +58,12 @@ Example pipeline:
 
 Run it with `python -m omjb.cli run --suite guardrail-lab --name pipeline-check --target echo --pipeline-json pipeline.json`. A blocked input is not sent to the provider. A blocked output is quarantined in the evidence record and marked for review. A review decision is recorded but does not silently block. These are defensive controls, not jailbreak generation or bypass optimization.
 
+## Standalone guard review and pinned downloads
+
+Standalone guard evaluation accepts labeled JSON/JSONL/YAML corpora with `text` and `label` fields (`benign` or `attack`). Use `guard-evaluate` to persist each sample, expected label, guard decision, findings, and provenance in separate guard-evaluation tables. Use `guard-adjudicate` to review whether a recorded guard decision was correct, incorrect, unclear, or skipped. Reviewer identity scopes the pending queue. `guard-report` reports guard precision/recall against corpus labels and reviewer agreement separately. These records are intentionally not mixed with model-response adjudications (`refusal/compliance/partial/unclear/skip`), because a guard decision and a model response are different measurements.
+
+The `fetch` command downloads only a caller-configured HTTPS source with an explicit immutable revision, license declaration, and expected SHA-256. Its JSON config requires `name`, `url`, `sha256`, `revision`, `license`, `format`, and `prompt_field`; optional field mappings include `id_field`, `category_field`, `expected_field`, `system_field`, `author`, `date`, and `notes`. The downloader rejects hash mismatches and unsupported expected labels, writes probe-schema JSONL, and uses the existing provenance manifest writer. It does not invent source licenses or ship third-party corpora. Example: `python -m omjb.cli fetch --source-config source.json --output corpus/fetched.jsonl`, followed by `python -m omjb.cli verify corpus/fetched.jsonl.manifest.json`.
+
 ## Evidence, adjudication and metrics
 
 SQLite stores run configuration without API keys, prompts, responses, response SHA-256 digests, heuristic triage, guard observations and human adjudications. Existing databases are upgraded additively; tables are not dropped. Manual labels are stored separately from model/heuristic labels.
