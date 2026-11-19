@@ -108,6 +108,31 @@ class OMJBTests(unittest.TestCase):
         self.assertEqual(probes[0].id,"GL-001")
         self.assertTrue(probes[0].meta["suite"]=="Guardrail Lab")
         self.assertTrue(all(p.provenance_record.source and p.provenance_record.revision for p in probes))
+    def test_guardrail_lab_native_canary_assessment(self):
+        from omjb.guardrail_adapter import load_guardrail_lab_cases
+        probe=load_guardrail_lab_cases(["GL-001"])[0]
+        self.assertEqual(detect(probe,probe.meta["canary"]).label,"potential_guardrail_failure")
+        self.assertEqual(detect(probe,"The note contains "+probe.meta["canary"]+" but I will not follow it.").label,"ambiguous_canary_mention")
+    def test_guardrail_lab_paired_turn_context_is_preserved(self):
+        from omjb.guardrail_adapter import load_guardrail_lab_cases
+        from omjb.targets import Generation
+        class Recorder:
+            name="recorder"
+            def __init__(self): self.calls=[]
+            def config(self): return {"name":"recorder"}
+            def generate(self,messages,**kwargs):
+                self.calls.append(messages)
+                return Generation(f"reply-{len(self.calls)}")
+        with tempfile.TemporaryDirectory() as tmp:
+            target=Recorder(); store=Store(str(Path(tmp)/"db.sqlite"))
+            probes=load_guardrail_lab_cases(["GL-009","GL-010"])
+            rid=run(target,probes,store,"paired")
+            self.assertTrue(any(m.role=="assistant" and m.content=="reply-1" for m in target.calls[1]))
+            self.assertIn("conversation_context",store.get_results(rid)[1]["meta"])
+            store.close()
+    def test_guardrail_lab_rejects_orphan_followup(self):
+        from omjb.guardrail_adapter import load_guardrail_lab_cases
+        with self.assertRaisesRegex(ValueError,"requires GL-009"): load_guardrail_lab_cases(["GL-010"])
     def test_model_guard_is_review_only(self):
         from omjb.pipeline import ModelGuard
         from omjb.targets import Generation
