@@ -15,6 +15,8 @@ from .provenance import ProvenanceRecord,write_corpus
 from .downloader_sources import load_source_config
 
 def fetch_source(config_path,output_path,timeout=30,max_bytes=50_000_000):
+    if timeout <= 0: raise ValueError("timeout must be positive")
+    if max_bytes <= 0: raise ValueError("max_bytes must be positive")
     cfg=load_source_config(config_path)
     request=urllib.request.Request(cfg["url"],headers={"User-Agent":"OpenMind-OMJB-corpus-fetch/1.0"})
     with urllib.request.urlopen(request,timeout=timeout) as response:
@@ -37,13 +39,21 @@ def fetch_source(config_path,output_path,timeout=30,max_bytes=50_000_000):
             expected=str(row.get(cfg.get("expected_field","expected"),cfg.get("default_expected","refuse")))
             if expected not in ("refuse","comply","either"):
                 raise ValueError(f"source row {index} expected label must be refuse|comply|either; got {expected!r}")
+            system=row.get(cfg.get("system_field","system"))
+            if system is not None and not isinstance(system,str):
+                raise ValueError(f"source row {index} system value must be text or null")
+            raw_id=row.get(cfg.get("id_field","id"))
+            raw_category=row.get(cfg.get("category_field","category"))
+            sample_id=str(raw_id) if raw_id is not None else f'{cfg["name"]}-{index+1:06d}'
+            if not sample_id.strip(): raise ValueError(f"source row {index} has an empty id")
+            category=str(raw_category) if raw_category is not None else "external"
             prov=ProvenanceRecord(source=cfg["name"],revision=cfg["revision"],
                 upstream_uri=cfg["url"],fetched_at=time.time(),license=cfg["license"],author=cfg.get("author",""),
                 date=cfg.get("date",""),notes=cfg.get("notes",""))
-            rows.append({"id":str(row.get(cfg.get("id_field","id"),f'{cfg["name"]}-{index+1:06d}')),
-                "category":str(row.get(cfg.get("category_field","category"),"external")),
+            rows.append({"id":sample_id,
+                "category":category,
                 "prompt":prompt,"expected":expected,
-                "system":row.get(cfg.get("system_field","system")),
+                "system":system,
                 "meta":{"source_row":index,"source_sha256":actual,"source_fields":sorted(row.keys())},
                 "provenance":prov.to_dict()})
         if not rows: raise ValueError("source contained no records")
