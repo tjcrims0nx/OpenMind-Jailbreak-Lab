@@ -745,7 +745,7 @@ The `api` extra enables async HTTP/provider clients and the `omjb-remote` / `omj
 
 ---
 
-## 13. Multi-provider OMJB campaign evaluator
+## OMJB multi-provider campaign evaluator
 
 The OMJB mutation package includes a separate concurrent evaluator for running the same **human-reviewed benign corpus** across multiple provider adapters. This is distinct from the Guardrail Lab workflow above and uses the native adapters documented in [the evaluator guide](docs/chat-completions-evaluator.md).
 
