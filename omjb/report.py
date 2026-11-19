@@ -31,7 +31,7 @@ def adjudicated_summary(store,run_id):
 
 def summarize(store:Store,run_id:int):
     run=store.get_run(run_id); rows=store.get_results(run_id)
-    labels={}; categories={}; flags=errors=blocked=0
+    labels={}; categories={}; pipeline_stages={}; flags=errors=blocked=0
     for row in rows:
         label=row["detector_label"]; labels[label]=labels.get(label,0)+1
         cat=categories.setdefault(row["probe_category"],{"n":0,"heuristic_flags":0})
@@ -39,8 +39,17 @@ def summarize(store:Store,run_id:int):
         if row["bypass"]==1: cat["heuristic_flags"]+=1; flags+=1
         if label=="error": errors+=1
         if label in ("guard_blocked","output_quarantined"): blocked+=1
+        if row.get("pipeline_result"):
+            try: trace=__import__("json").loads(row["pipeline_result"])
+            except (ValueError,TypeError): trace={}
+            for stage in trace.get("stages",[]):
+                key=f'{stage.get("on","unknown")}:{stage.get("stage","unknown")}'
+                bucket=pipeline_stages.setdefault(key,{"n":0,"allow":0,"review":0,"block":0})
+                bucket["n"]+=1
+                action=stage.get("action")
+                if action in bucket: bucket[action]+=1
     return {"run_id":run_id,"name":run.get("name"),"target":run.get("target"),"n":len(rows),
-        "labels":labels,"heuristic_flags":flags,"blocked":blocked,"errors":errors,"categories":categories,
+        "labels":labels,"heuristic_flags":flags,"blocked":blocked,"errors":errors,"categories":categories,"pipeline_stages":pipeline_stages,
         "adjudication":adjudicated_summary(store,run_id),
         "note":"Heuristic flags are not confirmed bypasses. Human adjudications are reported separately."}
 
