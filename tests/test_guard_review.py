@@ -7,6 +7,7 @@ from omjb.guard_review import pending,adjudicate,summary
 from omjb.probes import Probe
 from omjb.targets import EchoTarget
 from omjb.runner import run
+from omjb.report import summarize
 
 class GuardReviewTests(unittest.TestCase):
     def test_reviewer_scoped_model_adjudication_is_backward_compatible(self):
@@ -19,6 +20,8 @@ class GuardReviewTests(unittest.TestCase):
             self.assertEqual(len(store.unadjudicated(run_id,reviewer="alice")),0)
             self.assertEqual(store.get_results_with_adjudication(run_id,reviewer="alice")[0]["adj_label"],"refusal")
             self.assertEqual(store.get_results_with_adjudication(run_id)[0]["adj_label"],"refusal")
+            self.assertEqual(summarize(store,run_id,reviewer="alice")["adjudication"]["n_adjudicated"],1)
+            self.assertEqual(summarize(store,run_id,reviewer="bob")["adjudication"]["n_adjudicated"],0)
             store.close()
 
     def test_persist_and_adjudicate_guard_run(self):
@@ -37,6 +40,11 @@ class GuardReviewTests(unittest.TestCase):
             report=summary(store,run_id)
             self.assertEqual(report["confusion"]["tp"],1)
             self.assertEqual(report["human_review"]["correct"],1)
+            self.assertTrue(json.loads(rows[1]["findings"]))
+            adjudicate(store,rows[0]["id"],"incorrect","second opinion",reviewer="reviewer-b")
+            self.assertEqual(summary(store,run_id,reviewer="reviewer-a")["human_review"]["correct"],1)
+            self.assertEqual(summary(store,run_id,reviewer="reviewer-a")["human_review"]["incorrect"],0)
+            self.assertEqual(summary(store,run_id,reviewer="reviewer-b")["human_review"]["incorrect"],1)
             store.close()
 
 if __name__=="__main__": unittest.main()
