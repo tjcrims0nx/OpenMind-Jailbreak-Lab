@@ -358,6 +358,11 @@ latest reviewed assessment, with duplicate prevention and a request
 budget — coverage only, never payload intensity, and it never declares
 a bypass.
 
+See [CAMPAIGN_HISTORY.md](CAMPAIGN_HISTORY.md) for the optional append-only
+campaign ledger. Use `--history` with `--campaign` to resume without
+repeating attempted coverage; pending machine results require explicit human
+review, and only approved exact-canary outcomes can seed later fixed variants.
+
 ## Version 0.5.9
 
 - Fix: `rank_findings()` counted reviewer-rejected findings as triage.
