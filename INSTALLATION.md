@@ -16,7 +16,7 @@ Before installing, make sure you have:
 * An API key for any hosted provider you intend to test.
 * A local inference server if testing locally hosted models.
 
-Dependencies: The repository's core modules use Python's standard library. No separate pip install step is currently required.
+Dependencies: The legacy/root-level tools use the Python standard library. The integrated OMJB package is installable with `python -m pip install -e .` (recommended for the `omjb` and `omjb-mutate` command-line tools). Optional YAML, Parquet, and provider HTTP integrations are installed with the extras documented in [OMJB installation](omjb/INSTALLATION.md).
 
 Python 3.12 is used in CI.
 
@@ -128,7 +128,7 @@ The validator should report:
 VALIDATION PASSED
 ```
 
-The current benchmark contains 66 cases.
+The current OpenMind Benchmark release documented by this repository is **v0.8.0 with 81 cases**. This benchmark is separate from the 76-case Guardrail Lab suite. See [benchmark scoring](SCORING.md) and [methodology](METHODOLOGY.md) for evaluation rules.
 
 List Guardrail Lab tests
 
@@ -742,6 +742,57 @@ python -m omjb.cli run --suite guardrail-lab --case GL-001 --name smoke --target
 ```
 
 The `api` extra enables async HTTP/provider clients and the `omjb-remote` / `omjb-mutate` commands; Parquet requires the `parquet` extra. The provider evaluation pipeline forwards only explicitly reviewed benign probes to model APIs. The mutation engine requires a human-review gate and is limited to benign robustness transforms. Read [OMJB installation and operator guide](omjb/INSTALLATION.md), [remote evaluation](docs/remote-evaluation.md), and [mutation engine](docs/mutation-engine.md) before live use.
+
+---
+
+## 13. Multi-provider OMJB campaign evaluator
+
+The OMJB mutation package includes a separate concurrent evaluator for running the same **human-reviewed benign corpus** across multiple provider adapters. This is distinct from the Guardrail Lab workflow above and uses the native adapters documented in [the evaluator guide](docs/chat-completions-evaluator.md).
+
+Install the provider HTTP extra:
+
+```bash
+python -m pip install -e '.[api]'
+```
+
+Set only the credentials for the providers you intend to call:
+
+```bash
+export OPENAI_API_KEY="YOUR_OPENAI_KEY"
+export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_KEY"
+export GEMINI_API_KEY="YOUR_GEMINI_KEY"
+```
+
+Run a bounded provider matrix:
+
+```bash
+omjb-mutate chat-eval \
+  --corpus corpus/benign-controls.json \
+  --target openai:gpt-4o-mini \
+  --target anthropic:claude-3-5-haiku-latest \
+  --target gemini:gemini-2.5-flash \
+  --max-requests 60 \
+  --workers 4 \
+  --timeout 45 \
+  --max-seconds 180 \
+  --max-usd 2.00 \
+  --estimated-request-cost 0.02 \
+  --output reports/provider-matrix.json
+```
+
+Supported OMJB target adapters include OpenAI, Anthropic, Gemini, local Ollama, DeepSeek, Groq, Together, custom OpenAI-compatible endpoints, and the offline Echo target. Model IDs and account access are provider-specific and may change.
+
+**Campaign controls and interpretation:**
+
+- The request cap applies globally across the provider × probe matrix.
+- Remote campaigns require a positive `--max-usd` and operator-supplied `--estimated-request-cost`; this is a conservative estimate, not provider-reported billing.
+- Worker count, per-request timeout, scheduling deadline, and output-token ceiling are bounded independently.
+- The scheduling deadline can cancel queued requests; in-flight network requests may continue until their per-request timeout.
+- Only records marked `expected="comply"` and `meta.mutation_safe=true` after human review are eligible.
+- Successful responses are evidence for human review. Missing refusal phrases are not proof of a bypass; provider/API errors are inconclusive.
+- Keep raw transcripts and JSON reports private until reviewed; they can contain prompts and model responses.
+
+For local Ollama, use `--target ollama:MODEL` with zero estimated cost. For full adapter details, request/response contracts, accounting caveats, and complete examples, see [Concurrent multi-provider evaluation](docs/chat-completions-evaluator.md).
 
 ---
 
