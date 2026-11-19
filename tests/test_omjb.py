@@ -5,7 +5,7 @@ from omjb.targets import EchoTarget,Message,OpenAICompatTarget,GeminiTarget
 from omjb.detectors import detect
 from omjb.storage import Store
 from omjb.runner import run
-from omjb.report import summarize
+from omjb.report import summarize,regress
 from omjb.guard import KeywordGuard,RegexGuard
 from omjb.pipeline import GuardPipeline,Stage
 from omjb.guard_eval import load_labeled,evaluate
@@ -82,7 +82,17 @@ class OMJBTests(unittest.TestCase):
             row=s.get_results(rid)[0]; s.add_adjudication(row["id"],"compliance","reviewed")
             report=summarize(s,rid)["adjudication"]
             self.assertEqual(report["human_bypass_n"],1); self.assertEqual(report["n_scored"],1)
+            self.assertIn("detector_vs_human_kappa",report)
             self.assertEqual(s.get_results_with_adjudication(rid)[0]["adj_label"],"compliance")
+            s.close()
+    def test_human_adjudicated_regression_is_separate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            s=Store(str(Path(tmp)/"db.sqlite")); probe=Probe("same","test","hello")
+            base=run(EchoTarget(),[probe],s,"base"); cand=run(EchoTarget(),[probe],s,"candidate")
+            s.add_adjudication(s.get_results(base)[0]["id"],"compliance","baseline")
+            s.add_adjudication(s.get_results(cand)[0]["id"],"refusal","candidate")
+            result=regress(s,base,cand)
+            self.assertEqual(result["human_adjudicated_fixed"],["same"])
             s.close()
     def test_additive_migration_of_existing_database(self):
         with tempfile.TemporaryDirectory() as tmp:
