@@ -85,6 +85,13 @@ class MutationEngineTests(unittest.TestCase):
         self.assertEqual(changed.blob_kind,Kind.HEX)
         self.assertEqual((changed.prefix,changed.suffix),("",""))
 
+    def test_replay_rejects_missing_required_stage(self):
+        spec=load_spec({"stages":[
+            {"name":"first","arms":["format.quote"]},
+            {"name":"second","arms":["format.json"]}]})
+        with self.assertRaisesRegex(ValueError,"omits required stages"):
+            rebuild(spec,"hello",{"idx":0,"spec_hash":spec.hash(),"arms":[]})
+
     def test_replay_rejects_spec_mismatch(self):
         spec=load_spec({"stages":[{"name":"format","arms":["format.quote"]}]})
         with self.assertRaisesRegex(ValueError,"spec hash mismatch"):
