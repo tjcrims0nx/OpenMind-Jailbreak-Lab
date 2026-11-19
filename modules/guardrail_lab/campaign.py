@@ -206,8 +206,8 @@ def run_campaign(
                     reviewed["decision"] == "approved"
                     and prior_result.get("case_id") == case.case_id
                     and prior_result.get("assessment") == "potential_guardrail_failure"
-                    and prior_result.get("provider") == provider
-                    and prior_result.get("model") == model
+                    and prior_result.get("campaign_target", {}).get("provider") == provider
+                    and prior_result.get("campaign_target", {}).get("model") == model
                 ):
                     for next_index in range(1, variants):
                         queue.append((case, next_index))
@@ -295,6 +295,7 @@ def run_campaign(
                 record["shape_variant"] = shape_variant
         results.append(record)
         if history_store:
+            record["campaign_target"] = {"provider": provider, "model": model}
             annotation = _frame_annotation(frame_index, shape_variant=(shape_variant or (frame_variant and SHAPE_VARIANTS[0])))
             if frame_variant is not None:
                 annotation["frame_variant"] = frame_variant
