@@ -53,6 +53,10 @@ def main(argv=None):
     ft.add_argument("--source-config",required=True); ft.add_argument("--output",required=True)
     vf=sub.add_parser("verify",help="verify a corpus file against a JSON manifest"); vf.add_argument("manifest")
     args=parser.parse_args(argv)
+    if args.cmd=="fetch":
+        from .downloaders import fetch_source
+        print(json.dumps(fetch_source(args.source_config,args.output),indent=2))
+        return 0
     if args.cmd=="verify":
         result=verify_manifest(args.manifest)
         print(json.dumps(result,indent=2))
@@ -102,6 +106,29 @@ def main(argv=None):
             else:
                 count={"jsonl":export_jsonl,"csv":export_csv,"report":export_report}[args.format](store,args.run_id,args.output)
             if count is not None: print(json.dumps({"exported":count,"path":args.output}))
+        elif args.cmd=="guard-evaluate":
+            from .guard_eval import load_labeled,evaluate
+            from .guard import evaluate_guards
+            samples=load_labeled(args.corpus,require_provenance=args.require_provenance,dedupe=args.dedupe)
+            guards=[]
+            if args.review_term: guards.append(KeywordGuard(args.review_term,decision="review",name="review"))
+            if args.block_term: guards.append(KeywordGuard(args.block_term,decision="block",name="block"))
+            class _Guard:
+                name="cli-keyword-guard"
+                def inspect(self,text,stage="input"):
+                    return evaluate_guards(text,guards,stage=stage)
+            print(json.dumps(evaluate(_Guard(),samples,store=store,run_name=args.name),indent=2))
+        elif args.cmd=="guard-adjudicate":
+            from .guard_review import pending,adjudicate
+            for row in pending(store,args.run_id,args.reviewer):
+                print("\\n"+"="*60+"\\n",row["sample_id"],row["category"],row["decision"])
+                print("EXPECTED:",row["expected_label"],"\\nTEXT:",row["text"][:1000])
+                label=input("review [correct/incorrect/unclear/skip]> ").strip().lower() or "skip"
+                notes=input("notes> ").strip()
+                adjudicate(store,row["id"],label,notes,reviewer=args.reviewer)
+        elif args.cmd=="guard-report":
+            from .guard_review import summary as guard_summary
+            print(json.dumps(guard_summary(store,args.run_id),indent=2))
         elif args.cmd=="adjudicate":
             for row in store.unadjudicated(args.run_id):
                 print("\n"+"="*60+"\n",row["probe_id"],row["detector_label"],row["detector_reason"])
