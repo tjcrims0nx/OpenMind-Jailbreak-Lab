@@ -33,7 +33,25 @@ procedural = generate_procedural(reviewed_benign_probe)
 
 Each `MutationCase` includes its parent probe ID, deterministic ID, transform
 names/families, and SHA-256 hashes of input and output. Duplicate outputs are
-removed. Generation is capped by `max_variants`.
+removed. `max_variants` defaults to 32 and must be a positive integer or `None`.
+Passing `None` removes the per-probe count cap and returns all distinct variants
+available from the registered static transforms and the configured
+`max_chain_depth`. The search space is finite for a fixed chain depth; this is
+not an unbounded or continuously running generator.
+
+### Enumerate all available variants
+
+```python
+from omjb.mutations import MutationEngine
+
+engine = MutationEngine(max_variants=None, max_chain_depth=2)
+cases = engine.generate(reviewed_benign_probe)
+```
+
+This still enforces the approval gate above, removes duplicate outputs, and
+uses the configured chain depth. Increasing chain depth can expand the
+combinatorial search space; review the resulting corpus size before sending it
+to a remote endpoint.
 
 ## Pipeline integration
 
@@ -45,10 +63,15 @@ result = await pipeline.run(
     probes,
     endpoint="https://your-guard.example/evaluate",
     mutation_profile="robustness",
-    max_mutations_per_probe=16,
+    max_mutations_per_probe=None,
 )
 ```
 
-The report includes generated cases under `mutation_cases`; guardrail and
-provider results include both original and generated probe IDs. Providers are
-still called only for items the guard endpoint allows.
+`max_mutations_per_probe` defaults to 16. Set it to `None` to remove the
+per-probe cap and enumerate the mutation engine's available variants at its
+default chain depth. This setting does not bypass the endpoint: provider calls
+remain limited to probes allowed by the guard endpoint and explicitly marked
+as reviewed benign. The async evaluator does not impose the mutation engine's
+separate USD/time budget; apply provider quotas, rate limits, and billing
+controls when running remote evaluations. The report includes generated cases
+under `mutation_cases` and both original and generated probe IDs.
