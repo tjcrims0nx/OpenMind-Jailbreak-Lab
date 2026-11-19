@@ -102,7 +102,10 @@ class OMJBTests(unittest.TestCase):
             c.executescript("CREATE TABLE runs(id INTEGER PRIMARY KEY,name TEXT,target TEXT,config TEXT,started_at REAL,finished_at REAL); CREATE TABLE results(id INTEGER PRIMARY KEY,run_id INTEGER,probe_id TEXT,probe_category TEXT,prompt TEXT,system TEXT,response TEXT,response_sha256 TEXT,detector_label TEXT,detector_score REAL,detector_reason TEXT,bypass INTEGER,meta TEXT,created_at REAL); CREATE TABLE adjudications(id INTEGER PRIMARY KEY,result_id INTEGER,label TEXT,notes TEXT,adjudicated_at REAL);")
             c.close(); s=Store(path)
             cols={r["name"] for r in s.conn.execute("PRAGMA table_info(results)")}
-            self.assertIn("pipeline_result",cols); self.assertIn("provenance",cols); s.close()
+            self.assertIn("pipeline_result",cols); self.assertIn("provenance",cols)
+            adjudication_cols={r["name"] for r in s.conn.execute("PRAGMA table_info(adjudications)")}
+            self.assertIn("reviewer",adjudication_cols)
+            s.close()
     def test_existing_guardrail_lab_suite_adapter(self):
         from omjb.guardrail_adapter import load_guardrail_lab_cases
         probes=load_guardrail_lab_cases()
