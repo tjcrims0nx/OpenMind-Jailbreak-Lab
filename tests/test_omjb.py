@@ -32,6 +32,8 @@ class OMJBTests(unittest.TestCase):
             self.assertEqual(load_probes(str(p))[0].prompt,"hello")
             p=Path(tmp)/"tensor.json"; p.write_text(json.dumps({"prompts":[{"prompt":"test"}]}))
             self.assertEqual(load_probes(str(p))[0].prompt,"test")
+            p=Path(tmp)/"splits.json"; p.write_text(json.dumps({"train":[{"prompt":"one"}],"test":[{"prompt":"two"}]}))
+            self.assertEqual([x.prompt for x in load_probes(str(p))],["one","two"])
     def test_metadata_only_and_bad_provenance(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp)/"cases.json"; p.write_text(json.dumps([{"id":"src","prompt":"text","provenance":{"runnable":False}}]))
