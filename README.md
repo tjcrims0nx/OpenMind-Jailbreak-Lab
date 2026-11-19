@@ -25,6 +25,8 @@ OpenMind combines bounded adversarial tests, provider-backed scanning, benchmark
 - **OpenMind Benchmark:** [versioned evaluation set](SCORING.md); current file: [benchmark_v0.8.0.jsonl](data/benchmark_v0.8.0.jsonl) (81 cases, incl. 6 matched benign twins).
 - **JB-002:** [manual finding records and validation](modules/jb002/README.md).
 
+- **OMJB evaluation package:** [provider-neutral runner, guard evaluation, reviewer adjudication, provenance manifests, and pinned corpus imports](omjb/README.md). It is an additive CLI and evidence store; it does not replace the 76-case Guardrail Lab or the metadata-only original-source browser.
+
 The optional `--research-mode` runs six reviewed framings with evidence-triggered follow-ups within the configured budget. It is for authorized testing and evidence collection; it does not create unrestricted harmful bypasses or execute model-generated tool instructions.
 
 ## Quick start
