@@ -146,6 +146,38 @@ These listing commands do not require API credentials or make provider API calls
 
 ---
 
+## OMJB: standalone evaluation, guard review, and corpus provenance
+
+The optional OMJB package adds a provider-neutral runner and SQLite evidence store alongside the existing Guardrail Lab and benchmark. It requires Python 3.10+; its core uses the standard library. Install the console command from the repository root:
+
+```bash
+pip install .
+omjb --help
+```
+
+Run its offline tests and an Echo-target smoke test:
+
+```bash
+python -m unittest discover -s tests -p 'test_omjb.py' -v
+python -m unittest discover -s tests -p 'test_guard_review.py' -v
+python -m unittest discover -s tests -p 'test_downloaders.py' -v
+python -m omjb.cli run --suite guardrail-lab --case GL-001 --name omjb-smoke --target echo
+```
+
+For the separate standalone guard workflow, prepare JSONL records with `text` and `label` (`benign` or `attack`), then evaluate and review:
+
+```bash
+python -m omjb.cli guard-evaluate --corpus guard_samples.jsonl --name guard-review --block-term "inert test marker"
+python -m omjb.cli guard-adjudicate GUARD_RUN_ID --reviewer reviewer-1
+python -m omjb.cli guard-report GUARD_RUN_ID --reviewer reviewer-1
+```
+
+Model-response adjudication remains separate and uses `refusal/compliance/partial/unclear/skip`; guard review uses `correct/incorrect/unclear/skip`. Reviewer-specific model reports are available with `python -m omjb.cli report RUN_ID --reviewer reviewer-1`. The full command reference, pinned-download configuration, provenance requirements, and measurement caveats are in [OMJB documentation](omjb/README.md).
+
+The optional YAML reader requires `pip install '.[yaml]'`. The downloader requires a caller-supplied HTTPS URL, immutable revision, SHA-256, license declaration, and `"reviewed": true` after human confirmation that the source is authorized and safe to run. It creates probe JSONL and a provenance manifest; it does not independently verify legal license claims or import original archive prompts as runnable content.
+
+---
+
 ## 5. Configure API credentials
 
 API keys must be supplied through environment variables.
