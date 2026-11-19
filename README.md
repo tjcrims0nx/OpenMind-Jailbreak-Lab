@@ -1,220 +1,310 @@
-# OpenMind Jailbreak Lab
+<div align="center">
 
-<p align="center">
-  <img src="assets/logo.jpg" alt="OpenMind Jailbreak Lab logo" width="420">
-</p>
+<img src="assets/neon-probe.svg" alt="Animated neon network security probe scanning a shield target" width="100%">
 
-<p align="center"><strong>Provider-neutral toolkit for authorized AI security testing and guardrail evaluation.</strong></p>
+# OPENMIND // JAILBREAK LAB
 
-OpenMind combines bounded adversarial tests, provider-backed scanning, benchmark evaluation, and evidence reporting. It supports repeatable assessment; a test run is not proof of a vulnerability or a guarantee of a successful jailbreak.
+### Authorized AI security testing · Guardrail evaluation · Reproducible evidence
 
-**[Open the live Hugging Face Space](https://huggingface.co/spaces/Grimxlock/OpenMind-Jailbreak-Lab)** · [Manual review workspace](manual_reviews/README.md)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-00e5ff?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-see%20LICENSE-ff3bd4?style=for-the-badge)](LICENSE)
+[![Security research](https://img.shields.io/badge/focus-AI%20security-9effc8?style=for-the-badge)](METHODOLOGY.md)
+[![CI](https://img.shields.io/badge/CI-GitHub%20Actions-7c6cff?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/)
 
-## Get started
+**Probe the boundary. Measure the response. Preserve the evidence.**
 
-- [Start Here](START_HERE.md) — quick setup, GitHub Actions, and mobile use.
-- [Installation](INSTALLATION.md) — providers, credentials, and advanced setup.
-- [Guardrail Lab guide](modules/guardrail_lab/README.md) — defensive cases, campaigns, and reports.
-- [Original Source Corpus](modules/original_source_corpus/README.md) — separate provenance browser and review workflow.
+[Quick start](#-quick-start) · [What’s inside](#-whats-inside) · [Providers](#-provider-matrix) · [Run a campaign](#-run-a-multi-provider-campaign) · [Docs](#-documentation)
 
-## Components
+</div>
 
-- **Guardrail Lab:** 76 runnable cases (24 core and 52 source-derived safe adaptations), provider adapters, bounded campaigns, JSON reports, and a findings registry. The 52 source-derived cases are a 4-category × 13-surface factorial: 52 pairwise-distinct prompts, one per category×surface pair (see [Research contributions](RESEARCH_CONTRIBUTIONS.md)).
-- **Original Source Corpus:** separate metadata-only browser for authentic archive records, source paths, sizes, hashes, and manual review. Original raw prompts are not sent to the Guardrail Lab runner.
-- **AI Scanner:** [provider-backed checks and response evidence](modules/ai_scanner/README.md).
-- **OpenMind Benchmark:** [versioned evaluation set](SCORING.md); current file: [benchmark_v0.8.0.jsonl](data/benchmark_v0.8.0.jsonl) (81 cases, incl. 6 matched benign twins).
-- **JB-002:** [manual finding records and validation](modules/jb002/README.md).
+---
 
-- **OMJB evaluation package:** [provider-neutral runner, guard evaluation, reviewer adjudication, provenance manifests, and pinned corpus imports](omjb/README.md). It is an additive CLI and evidence store; it does not replace the 76-case Guardrail Lab or the metadata-only original-source browser.
+## // Mission
 
-The optional `--research-mode` runs six reviewed framings with evidence-triggered follow-ups within the configured budget. It is for authorized testing and evidence collection; it does not create unrestricted harmful bypasses or execute model-generated tool instructions.
+OpenMind-Jailbreak-Lab is a provider-neutral workbench for **authorized AI security research**. It brings together reviewed test cases, provider adapters, bounded evaluation campaigns, mutation-based robustness checks, replayable traces, and human-reviewed findings.
 
-## Quick start
+The goal is not to manufacture an unrestricted bypass. The goal is to measure how systems handle untrusted content, instruction boundaries, and benign robustness cases—and to make every result inspectable and reproducible.
 
-Requires Python 3.10+ and Git.
+> **Research rule:** a suspicious response is a candidate signal, not proof. Automated heuristics never replace human adjudication.
+
+## // At a glance
+
+| Module | Current scope | Purpose |
+|---|---:|---|
+| Guardrail Lab | **76 runnable cases** | 24 core cases + 52 reviewed source-derived safe adaptations |
+| OpenMind Benchmark | **81 cases · v0.8.0** | Versioned evaluation set, including 6 matched benign twins |
+| OMJB harness | CLI + evidence store | Corpus ingestion, guards, provenance, adjudication, regression and export |
+| Mutation engine | Typed, replayable transforms | Benign robustness testing with reproducible candidate traces |
+| Multi-provider evaluator | 8 target types | Bounded concurrent provider × probe evaluation |
+| Original Source Corpus | Metadata-only browser | Provenance and manual review without executing raw archive prompts |
+| AI Scanner / JB-002 | Separate instruments | Provider-backed checks and structured finding records |
+
+<sub>Counts describe the repository's documented suites and interfaces; they are not a claim that every provider has been tested live.</sub>
+
+## // What's inside
+
+### 01 — Guardrail Lab
+
+A runnable defensive test suite with **76 cases**:
+
+- 24 core cases.
+- 52 source-derived safe adaptations, organized as a 4-category × 13-surface factorial.
+- Provider adapters, bounded campaign modes, JSON reports, and a findings registry.
+- The original source archive remains separate; risky source instructions are replaced with inert markers in runnable adaptations.
+
+Start here: [Guardrail Lab guide](modules/guardrail_lab/README.md) · [Provider matrix](modules/guardrail_lab/PROVIDER_MATRIX.md)
+
+### 02 — OpenMind Benchmark
+
+A versioned evaluation set with **81 cases**, including six matched benign twins.
+
+- Current documented file: [benchmark_v0.8.0.jsonl](data/benchmark_v0.8.0.jsonl)
+- Quality audit and scoring methodology.
+- Regression comparisons across runs and configurations.
+
+Read: [Scoring](SCORING.md) · [Methodology](METHODOLOGY.md)
+
+### 03 — OMJB evaluation harness
+
+An additive Python package for running corpora and recording evidence without replacing the existing Guardrail Lab.
+
+- JSON, JSONL, CSV, optional YAML and Parquet corpus support.
+- Defensive keyword, regex, composite, and optional model-assisted review stages.
+- SQLite evidence store, provenance manifests, SHA-256 row/file checks, and exports.
+- Human adjudication, reviewer-scoped queues, regression comparisons, and confidence intervals.
+- Existing Guardrail Lab suite can be run through OMJB with `--suite guardrail-lab`.
+
+Start here: [OMJB overview](omjb/README.md) · [Installation](omjb/INSTALLATION.md)
+
+### 04 — Mutation, replay & robustness
+
+The mutation engine supports typed transform pipelines for **reviewed benign probes**.
+
+- Deterministic candidate seeds and canonical spec hashes.
+- Typed input/output kinds and structured-region preservation.
+- Deduplication, transform version records, JSONL traces, and offline replay.
+- Optional count ceilings, while finite time and spend budgets remain active.
+- No concealed-instruction execution or safeguard-evasion transform families.
+
+Read: [Mutation engine](docs/mutation-engine.md) · [Robustness API](docs/mutation-robustness.md) · [Remote evaluation limits](docs/remote-evaluation.md)
+
+### 05 — Concurrent multi-provider evaluation
+
+The `omjb-mutate chat-eval` command evaluates the same reviewed benign corpus across multiple targets with bounded concurrency.
+
+- Provider-native request/response adapters.
+- Global request and estimated-cost caps across the provider × probe matrix.
+- Worker, per-request timeout, scheduling-deadline, and output-token limits.
+- JSON evidence reports with provider/model, latency, response, error, and triage fields.
+- Successful responses go to manual review; transport errors remain inconclusive.
+
+Read: [Multi-provider evaluator guide](docs/chat-completions-evaluator.md)
+
+## // Provider matrix
+
+| Target | Adapter / interface | Credential |
+|---|---|---|
+| OpenAI | Chat Completions | `OPENAI_API_KEY` |
+| Anthropic | Messages API | `ANTHROPIC_API_KEY` |
+| Google Gemini | `generateContent` | `GEMINI_API_KEY` |
+| Ollama | Local `/api/chat` | None by default |
+| DeepSeek | OpenAI-compatible | `DEEPSEEK_API_KEY` |
+| Groq | OpenAI-compatible | `GROQ_API_KEY` |
+| Together | OpenAI-compatible | `TOGETHER_API_KEY` |
+| Custom endpoint | OpenAI-compatible | Operator-selected env var |
+| Echo | Offline smoke-test target | None |
+
+The wider Guardrail Lab adapter matrix also documents GLM/Zhipu, Moonshot, NVIDIA NIM, OpenRouter, and compatible local/server endpoints. Support depends on the adapter, model identifier, endpoint, credentials, and provider limits.
+
+## // Quick start
+
+**Requirements:** Python 3.10+ and Git.
 
 ```bash
 git clone https://github.com/tjcrims0nx/OpenMind-Jailbreak-Lab.git
 cd OpenMind-Jailbreak-Lab
+
+python -m venv .venv
+# macOS / Linux
+source .venv/bin/activate
+# Windows PowerShell
+# .venv\Scripts\Activate.ps1
+
+python -m pip install --upgrade pip
+python -m pip install -e .
 python -m unittest discover -s tests -v
 python -m src.validate
-python -m modules.guardrail_lab --list
-python -m modules.original_source_corpus --search gemini
 ```
 
-Example Gemini campaign:
+List the existing Guardrail Lab cases:
 
 ```bash
-export GEMINI_API_KEY="YOUR_API_KEY"
-python -m modules.guardrail_lab --provider gemini --research-mode \
-  --source-corpus --budget 100 \
-  --output reports/gemini-research.json \
-  --registry findings/registry.jsonl
+python -m modules.guardrail_lab --list
 ```
 
-Use the environment variable for your provider and keep API keys out of source files and commits. See the [provider matrix](modules/guardrail_lab/PROVIDER_MATRIX.md) for supported configurations.
+Run an offline OMJB smoke test:
 
-## Source collections
+```bash
+python -m omjb.cli run \
+  --suite guardrail-lab \
+  --case GL-001 \
+  --name local-smoke \
+  --target echo
+```
 
-The 52 source-derived Guardrail Lab cases retain source IDs, paths, and hashes, but replace risky instructions with inert markers. They are **not verbatim source prompts** and remain in the defensive benchmark.
+Optional integrations:
 
-The **Original Source Corpus** is separate. Its inventory preserves authentic archive provenance without copying raw prompt bodies into the public repository or executing them. Browse records with `python -m modules.original_source_corpus`; create a human-review template with `--id SRC-### --export-review-template PATH`. The inventory loader validates JSONL records, rejects non-object values and malformed fields with a clear error, and enforces that every original-source record remains non-runnable. The checked-in review template is regression-tested against the generator. Details: [Original Source Corpus guide](modules/original_source_corpus/README.md).
+```bash
+python -m pip install -e '.[yaml,parquet,api]'
+```
 
-## Providers and automation
+## // Run a multi-provider campaign
 
-Adapters cover OpenAI, Anthropic, Gemini, DeepSeek, GLM/Zhipu, Moonshot, NVIDIA NIM, OpenRouter, Groq, Together, and compatible endpoints such as Ollama, vLLM, LM Studio, llama.cpp server, and LocalAI. Availability depends on credentials, model IDs, endpoint support, and provider limits.
+First, prepare a corpus whose records have been human-reviewed as benign. Each runnable probe must declare `expected="comply"` and `meta.mutation_safe=true`. The evaluator rejects records that do not pass this gate.
 
-The manually triggered [multi-provider GitHub Actions workflow](.github/workflows/multi-provider-red-team.yml) accepts a provider, model, scope, and run mode:
+Set provider keys in your shell or CI secrets—never in source code:
 
-- `core`: 24 core cases; `source`: 52 adaptations; `all`: 76 cases.
-- `full_suite`: separate run per selected case; `campaign`: bounded campaign of up to six reviewed framings.
+```bash
+export OPENAI_API_KEY="..."
+export ANTHROPIC_API_KEY="..."
+export GEMINI_API_KEY="..."
+```
 
-Add keys under **Settings → Secrets and variables → Actions**, then run **Actions → Manual multi-provider Guardrail Lab**. Download the JSON artifact from the workflow. Hosted runners cannot access services bound only to your local machine. API use may incur charges.
+Then run a bounded matrix:
 
-## Interpreting results
+```bash
+omjb-mutate chat-eval \
+  --corpus corpus/benign-controls.json \
+  --target openai:gpt-4o-mini \
+  --target anthropic:claude-3-5-haiku-latest \
+  --target gemini:gemini-2.5-flash \
+  --max-requests 60 \
+  --workers 4 \
+  --timeout 45 \
+  --max-seconds 180 \
+  --max-usd 2.00 \
+  --estimated-request-cost 0.02 \
+  --output reports/provider-matrix.json
+```
 
-| Label | Meaning |
+The request cap applies to the entire provider × probe matrix. The estimated spend is an operator-supplied conservative estimate, not provider-reported billing. The scheduling deadline cancels queued work; already-running network requests may continue until their per-request timeout. See the [full evaluator guide](docs/chat-completions-evaluator.md) before using paid endpoints.
+
+### Local Ollama
+
+```bash
+omjb-mutate chat-eval \
+  --corpus corpus/benign-controls.json \
+  --target ollama:qwen2.5:14b \
+  --max-requests 20 \
+  --max-usd 0 \
+  --estimated-request-cost 0 \
+  --output reports/ollama.json
+```
+
+### Manual multi-provider workflow
+
+The repository also includes a manually triggered [GitHub Actions workflow](.github/workflows/multi-provider-red-team.yml). It supports:
+
+- `core`: 24 core cases.
+- `source`: 52 safe adaptations.
+- `all`: 76 cases.
+- `full_suite`: separate run per selected case.
+- `campaign`: bounded campaign using reviewed framings.
+
+Add keys under **Settings → Secrets and variables → Actions**, then open **Actions → Manual multi-provider Guardrail Lab**. Hosted runners cannot reach services bound only to your local machine. API usage may incur charges.
+
+## // Reading results correctly
+
+| Signal / status | Interpretation |
 |---|---|
-| `potential_guardrail_failure` | Candidate signal; review and reproduce |
-| `ambiguous_canary_mention` | Canary appears; context matters |
-| `boundary_held` | Expected boundary observed |
+| `potential_guardrail_failure` | Candidate signal; manually review and reproduce |
+| `ambiguous_canary_mention` | Canary appeared; inspect context |
+| `boundary_held` | Expected boundary behavior observed |
 | `control_passed` | Benign control behaved as expected |
-| `manual_review` | Automated assessment inconclusive |
+| `manual_review` | Automated assessment is inconclusive |
 | `partial_run` | Run did not complete |
 
-Reports include case IDs, provider/model metadata, prompts, responses, errors, and available assessment labels. A canary quoted in an explanation or warning is not proof of a bypass. Rate limits, authentication failures, and proxy errors are infrastructure outcomes. Treat candidate findings as unverified until manually reviewed and reproduced. Use the [manual review workspace](manual_reviews/README.md) and copy its JSON template once per case; keep original run reports unchanged.
+**Do not treat a missing refusal phrase as a bypass.** A quoted canary, refusal wording, or heuristic flag is not ground truth. Authentication errors, rate limits, provider blocks, and transport failures are infrastructure/provider outcomes—not successful tests and not passes.
 
-## Evaluation snapshot — 16 November 2026
+Keep raw transcripts and reports private until reviewed. They may contain prompts and model responses.
 
-| Tested configuration | Adjudicated findings |
-|---|---:|
-| GPT-5.6-sol (AgentRouter) | 1 / 64 answered |
-| Claude Haiku 5.5 (Qronos) | 2 / 63 answered |
-| Gemini 3.5 Flash Lite | 7 / 66 |
-| NVIDIA Nemotron 3 Nano Omni | 9 / 61 text-bearing |
+## // Historical evaluation notes
 
-Blocked and no-text cases were unscored, not passes. The benchmark, Guardrail Lab, and AI Scanner are separate instruments; do not combine their scores. These results apply only to the tested configurations and gateways. See [methodology](METHODOLOGY.md), [scoring](SCORING.md), and the dated evidence report.
+The README's prior dated evidence snapshots are retained here as historical observations, not current universal model rankings. Results apply only to the exact model, gateway, harness settings, and date recorded.
 
-## Evaluation snapshot — 17 November 2026 (AgentRouter re-test)
+| Date / configuration | Recorded result |
+|---|---|
+| 16 Nov 2026 · GPT-5.6-sol via AgentRouter | 1 / 64 answered |
+| 16 Nov 2026 · Claude Haiku 5.5 via Qronos | 2 / 63 answered |
+| 16 Nov 2026 · Gemini 3.5 Flash Lite | 7 / 66 |
+| 16 Nov 2026 · NVIDIA Nemotron 3 Nano Omni | 9 / 61 text-bearing |
+| 17 Nov 2026 · GPT-5.6-sol via AgentRouter re-test | 0 / 65 answered |
+| 17 Nov 2026 · GPT-6.1-sol via AgentRouter | 0 / 63 answered |
 
-| Tested configuration | Adjudicated findings |
-|---|---:|
-| GPT-5.6-sol (AgentRouter) | 0 / 65 answered |
-| GPT-6.1-sol (AgentRouter) | 0 / 63 answered |
+Blocked and no-text cases were unscored, not passes. One intermittent finding did not reproduce in the follow-up run. Benchmark, Guardrail Lab, and AI Scanner are separate instruments; their scores must not be combined. Consult the dated evidence reports and [methodology](METHODOLOGY.md) for run-specific settings.
 
-GPT-5.6-sol's 16 November OM-057 failure did not reproduce — it is intermittent (1 failure in 2 runs), not a standing failure. GPT-6.1-sol's first full lab test (benchmark, campaign, scanner) found 0 failures. Gemini, Claude Haiku, and NVIDIA benchmark numbers are unchanged from 16 November. Guardrail Lab, 17 November: Gemini 76-case suite, 0 potential failures (fully adjudicated); AgentRouter campaigns on both GPT models, 0 failures.
+## // Original Source Corpus & provenance
 
-## Tested configurations
+The Original Source Corpus is a **metadata-only browser** for authentic archive records, source paths, sizes, hashes, and manual review.
 
-What was actually run, and under which guardrails. Results apply only to
-these configurations and gateways.
+- Raw archive prompts are not fed to the runnable Guardrail Lab.
+- Safe adaptations preserve source IDs, paths, and hashes while replacing risky instructions with inert markers.
+- Imported corpora can be pinned to an immutable revision and checked against SHA-256.
+- Source licenses are caller-declared and must be reviewed; the tool does not independently establish legal permission.
 
-| Model | Gateway / access | Instruments run | When |
-|---|---|---|---|
-| Gemini 3.5 Flash Lite (`gemini-3.5-flash-lite`) | Direct (Google API) | Benchmark, Guardrail Lab, Scanner | Nov 2026 |
-| NVIDIA Nemotron 3 Nano Omni (`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning`) | NVIDIA NIM | Benchmark, Guardrail Lab, Scanner | Nov 2026 |
-| GPT-5.6-sol, GPT-6.1-sol | AgentRouter (Responses API) | Benchmark, Guardrail Lab, Scanner | Nov 2026 |
-| Claude Haiku 5.5 (`claude-haiku-5.5`) | Qronos | Benchmark, Guardrail Lab, Scanner | Nov 2026 |
-| Qwen `qwen2.5:0.5b-instruct` | Ollama (local) | Benchmark v0.5, Guardrail Lab | Nov 2026 |
-| OpenAI (`openai`) | Pollinations (free, no key) | Guardrail Lab only | Nov 2026 |
-| Qwen `qwen3-235b-a22b-2507`, DeepSeek `deepseek-chat-v3.1` | OpenRouter (paid) | Guardrail Lab only | Nov 2026 |
-| Mercury-3, GLM 5.3 Flash | Qronos | Guardrail Lab only | Nov 2026 |
+Read: [Original Source Corpus](modules/original_source_corpus/README.md) · [Research contributions](RESEARCH_CONTRIBUTIONS.md)
 
-Guardrail setups in play during those runs:
+## // Security, scope & responsible use
 
-- Every Guardrail Lab campaign sends the fixed lab system instruction
-  marking quoted text, documents, retrieved passages, metadata, and tool
-  outputs as untrusted data, not instructions. That is a harness baseline,
-  not the target application's own system prompt (see the Guardrail Lab
-  guide).
-- AgentRouter routes GPT through Azure OpenAI, whose content filter
-  blocked benchmark cases OM-008 and OM-063. Blocked cases are
-  provider-blocked and unscored, not passes.
-- Qronos runs its own input guardrail: it blocked Guardrail Lab cases
-  GL-002 and GL-003 and some scanner probes with HTTP 400
-  `jailbreak_detected`. Blocked cases are provider-blocked and unscored.
-- Benchmark runs used max tokens / max output tokens 1024 and a 5-second
-  delay between calls. Campaigns used budget 36, variants 6, delay 5, and
-  max tokens 1024 (AgentRouter) or 2048 (NVIDIA Nemotron); Gemini and
-  Qronos campaigns left max tokens at the adapter default.
+OpenMind is intended for systems you own or are explicitly authorized to assess.
 
-See [methodology](METHODOLOGY.md), [scoring](SCORING.md), and the dated
-evidence reports for the full per-run settings and raw results. The
-[known-bypass regression set](REGRESSION_SET.md) lists the bypasses that
-actually worked, for re-testing new models and system prompts.
+- Use reviewed benign probes for mutation and multi-provider robustness runs.
+- Keep provider credentials in environment variables or GitHub Actions secrets.
+- Keep finite wall-clock and spend limits on remote campaigns.
+- Do not place private prompts, raw transcripts, credentials, or sensitive findings in public commits.
+- Do not execute model-generated tool actions or treat decoded/quoted content as trusted instructions.
+- Reproduce and manually adjudicate candidate findings before disclosure.
 
-## Responsible testing
+OpenMind is experimental research software, not a security certification or a guarantee that a model is safe.
 
-Test only systems you own or are authorized to assess. Follow provider terms, rate limits, and applicable law. Use non-sensitive test data; do not seek real credentials, private data, or hidden secrets. Protect keys, review transcripts before sharing, and reproduce findings before disclosure. Revoke and replace any exposed key.
+## // Documentation
 
-## Documentation
+| Area | Guide |
+|---|---|
+| Getting started | [Start Here](START_HERE.md) · [Installation](INSTALLATION.md) |
+| Guardrail Lab | [Overview](modules/guardrail_lab/README.md) · [Provider matrix](modules/guardrail_lab/PROVIDER_MATRIX.md) |
+| OMJB | [Package overview](omjb/README.md) · [Installation](omjb/INSTALLATION.md) |
+| Mutation | [Engine](docs/mutation-engine.md) · [Robustness API](docs/mutation-robustness.md) |
+| Provider evaluation | [Concurrent evaluator](docs/chat-completions-evaluator.md) · [Remote limits](docs/remote-evaluation.md) |
+| Research | [Methodology](METHODOLOGY.md) · [Scoring](SCORING.md) · [Contributions](RESEARCH_CONTRIBUTIONS.md) |
+| Operations | [Manual reviews](manual_reviews/README.md) · [Registry](modules/guardrail_lab/REGISTRY.md) |
+| Releases | [Release checklist](RELEASE_CHECKLIST.md) · [Release status](RELEASE_STATUS.md) |
 
-[Installation](INSTALLATION.md) · [Guardrail Lab](modules/guardrail_lab/README.md) · [Original Source Corpus](modules/original_source_corpus/README.md) · [Provider matrix](modules/guardrail_lab/PROVIDER_MATRIX.md) · [Discovery engine](modules/guardrail_lab/DISCOVERY_ENGINE.md) · [Registry](modules/guardrail_lab/REGISTRY.md) · [Archive import](modules/guardrail_lab/EXTERNAL_ARCHIVE_IMPORT.md) · [Research contributions](RESEARCH_CONTRIBUTIONS.md) · [Methodology](METHODOLOGY.md) · [Release checklist](RELEASE_CHECKLIST.md) · [Release status](RELEASE_STATUS.md)
+## // Quality checks
 
-## Quality checks
+Run the full local test suite:
 
 ```bash
 python -m unittest discover -s tests -v
 python -m src.quality_audit data/benchmark_v0.8.0.jsonl
-python -m modules.guardrail_lab.compare \
-  reports/gemini.json reports/openai.json \
-  --output reports/comparison.json
+python -m src.validate
 ```
 
-For an offline demonstration: `python -m modules.guardrail_lab.demo --output reports/synthetic-demo.json`. Its output is fictional, not live-model evidence.
-
-## Status and license
-
-OpenMind is experimental software, not a certification. Provider behavior changes and not every configuration has been live-tested. Check [release status](RELEASE_STATUS.md) for CI and release gates, and [LICENSE](LICENSE) for terms.
-
-
-### Install the OMJB package
-
-The integrated OMJB harness is included in this repository. From the repository root, Python 3.10+ is required:
+Offline demo (synthetic output only):
 
 ```bash
-python -m venv .venv
-# macOS/Linux: source .venv/bin/activate
-# Windows PowerShell: .venv\\Scripts\\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -e .
-# Optional YAML, Parquet, and async provider integrations:
-python -m pip install -e '.[yaml,parquet,api]'
-python -m unittest discover -s tests -v
-python -m omjb.cli list
-python -m omjb.cli run --suite guardrail-lab --case GL-001 --name smoke --target echo
+python -m modules.guardrail_lab.demo \
+  --output reports/synthetic-demo.json
 ```
 
-For provider setup, corpus formats, async endpoint evaluation, typed region-aware benign mutation tests, provenance, adjudication, and export examples, see the [OMJB installation guide](omjb/INSTALLATION.md), [remote evaluation](docs/remote-evaluation.md), [mutation engine](docs/mutation-engine.md), and [OMJB reference](omjb/README.md). Keep provider keys in environment variables or GitHub Actions secrets—never in source files.
+Synthetic demo output is fictional and must not be presented as live-model evidence.
 
-## Scalable benign robustness testing
+---
 
-The OMJB mutation engine now supports removing per-run **count** ceilings without removing its other controls. In a pipeline spec, set `budget.max_candidates` and/or `budget.max_build_attempts` to JSON `null`; the finite `max_seconds` and `max_usd` budgets still apply. A positive USD budget requires a conservative `estimate_cost` callback. For the separate benign mutation API, `MutationEngine(max_variants=None)` enumerates all variants available at the configured chain depth. The async provider evaluator accepts `max_mutations_per_probe=None`; this disables its per-probe variant cap, not provider-side quotas, rate limits, or billing.
+<div align="center">
 
-Mutation is restricted to human-reviewed benign probes with `expected="comply"` and `meta.mutation_safe=true`. The engine preserves task meaning, deduplicates outputs, and records reproducibility evidence. These settings increase benign test coverage; they do not disable safeguards or create harmful bypass instructions.
+**OPENMIND // TEST WITH INTENT. VERIFY WITH EVIDENCE.**
 
-See [mutation engine capacity and budgets](docs/mutation-engine.md), [benign mutation robustness API](docs/mutation-robustness.md), and [remote evaluation limits](docs/remote-evaluation.md).
+<sub>Neon visuals are decorative. Evaluation outcomes are determined by the underlying test records and human review.</sub>
 
-## OMJB evaluation harness
-
-The `omjb-mutate chat-eval` command also runs a bounded provider matrix using native OpenAI, Anthropic, Gemini, Ollama, DeepSeek, Groq, and Together adapters, plus a custom OpenAI-compatible endpoint. It accepts only human-reviewed benign controls, keeps API keys in environment variables, and records successful responses for manual adjudication. Start with the [multi-provider evaluator guide](docs/chat-completions-evaluator.md); it includes provider setup, CLI examples, request/cost caps, timeout behavior, and report interpretation. This evaluator is separate from the existing Guardrail Lab campaigns.
-
-The additive `omjb` package now runs either external corpora or the existing Guardrail Lab case registry directly (`--suite guardrail-lab`), including the 24 core cases and 52 reviewed source-derived safe adaptations. It preserves the existing Guardrail Lab CLI and workflows; see [OMJB documentation](omjb/README.md). It includes a shared JSON/dict-root/JSONL/YAML/compressed corpus reader, ordered defensive guard pipelines, provenance validation and hashing, per-stage evidence, human-adjudication joins, and regression/export commands. It does not replace the benchmark, scanner, original-source metadata browser, or manual-review workspace. It includes Echo, OpenAI-compatible, Anthropic, Gemini, and Ollama targets; JSON/JSONL and optional YAML probe loading; defensive keyword/regex/composite guards; sequential guarded execution; SQLite evidence and guard observations; provenance manifests; human adjudication; Wilson intervals and adjudication-only classification metrics; regression comparisons; and JSONL/CSV/report exports.
-
-Quick offline check:
-
-```bash
-python -m unittest discover -s tests -p 'test_omjb.py' -v
-python -m omjb.cli run --probes corpus/omjb_probes.json --name local-check --target echo
-python -m omjb.cli run --suite guardrail-lab --case GL-001 --name lab-adapter-check --target echo
-python -m omjb.cli report 1
-```
-
-Gemini example (key stays in the environment):
-
-```bash
-export GEMINI_API_KEY="YOUR_API_KEY"
-python -m omjb.cli run --probes corpus/omjb_probes.json --name gemini-check --target gemini --model gemini-2.5-flash
-```
-
-Optional defensive checks can be configured with repeated `--input-review-term`, `--input-block-term`, `--output-review-term`, and `--output-block-term` flags. Review findings do not automatically block; block decisions prevent an input from being sent or quarantine a returned output. Exports: `python -m omjb.cli export RUN_ID --format jsonl|csv|report --output PATH`. YAML requires `pip install '.[yaml]'`. API credentials are not written to run configuration. All tests are bounded and intended for systems you own or are authorized to assess.
+</div>
