@@ -106,8 +106,11 @@ def run_campaign(
     *,
     provider: str,
     model: Optional[str] = None,
-    budget: int = 36,
+    budget: Optional[int] = 36,
     variants: int = 3,
+    max_build_attempts: Optional[int] = None,
+    max_usd: Optional[float] = None,
+    estimated_cost_per_request: Optional[float] = None,
     adaptive: bool = True,
     delay_seconds: float = 0.0,
     max_seconds: Optional[float] = None,
@@ -120,9 +123,34 @@ def run_campaign(
         raise ValueError(f"frame_variant must be one of {FRAME_VARIANTS}")
     if shape_variant is not None and shape_variant not in SHAPE_VARIANTS:
         raise ValueError(f"shape_variant must be one of {SHAPE_VARIANTS}")
-    if (isinstance(budget, bool) or not isinstance(budget, int)
-            or budget < 1 or budget > 1000):
-        raise ValueError("budget must be an integer between 1 and 1000")
+    if budget is not None and (
+        isinstance(budget, bool) or not isinstance(budget, int)
+        or budget < 1 or budget > 1000
+    ):
+        raise ValueError("budget must be an integer between 1 and 1000, or None")
+    if max_build_attempts is not None and (
+        isinstance(max_build_attempts, bool)
+        or not isinstance(max_build_attempts, int)
+        or max_build_attempts < 1
+    ):
+        raise ValueError("max_build_attempts must be a positive integer or None")
+    if max_usd is not None and (
+        not _is_finite_number(max_usd) or max_usd <= 0
+    ):
+        raise ValueError("max_usd must be a finite positive number")
+    if estimated_cost_per_request is not None and (
+        not _is_finite_number(estimated_cost_per_request)
+        or estimated_cost_per_request <= 0
+    ):
+        raise ValueError("estimated_cost_per_request must be a finite positive number")
+    if max_usd is not None and estimated_cost_per_request is None:
+        raise ValueError("estimated_cost_per_request is required when max_usd is set")
+    if budget is None and max_build_attempts is None and (
+        max_seconds is None or max_usd is None
+    ):
+        raise ValueError(
+            "unbounded count limits require finite max_seconds and max_usd"
+        )
     if (isinstance(variants, bool) or not isinstance(variants, int)
             or variants < 1 or variants > len(VARIANTS)):
         raise ValueError(
@@ -136,17 +164,45 @@ def run_campaign(
 
     selected_cases = _select_cases(case_ids)
 
+    campaign_plan = {
+        "algorithm": "fixed-reviewed-framings-v1",
+        "case_ids": [case.case_id for case in selected_cases],
+        "variants": variants,
+        "adaptive": adaptive,
+        "frame_variant": frame_variant,
+        "shape_variant": shape_variant,
+        "annotate_frames": annotate_frames,
+    }
+    campaign_plan_sha256 = hashlib.sha256(json.dumps(
+        campaign_plan, sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")).hexdigest()
+
     started = time.monotonic()
     queue = [(case, 0) for case in selected_cases]
     results: List[Dict] = []
     expanded = set()
     paired_conversation = []
     halt_reason = None
+    build_attempts = 0
+    estimated_spend_usd = 0.0
 
-    while queue and len(results) < budget:
+    while queue:
+        if budget is not None and len(results) >= budget:
+            halt_reason = "max_candidates"
+            break
+        if max_build_attempts is not None and build_attempts >= max_build_attempts:
+            halt_reason = "max_build_attempts"
+            break
         if max_seconds is not None and time.monotonic() - started >= max_seconds:
+            halt_reason = "max_seconds"
+            break
+        if (max_usd is not None
+                and estimated_spend_usd + estimated_cost_per_request > max_usd):
+            halt_reason = "estimated_usd_budget"
             break
         case, variant_index = queue.pop(0)
+        build_attempts += 1
         variant_name, template = VARIANTS[variant_index]
         prepared = replace(case, prompt=template.format(prompt=case.prompt))
         prior = paired_conversation if case.case_id == "GL-010" else None
@@ -164,6 +220,8 @@ def run_campaign(
             ]
         record["variant"] = variant_name
         record["attempt"] = len(results) + 1
+        record["estimated_cost_usd"] = estimated_cost_per_request or 0.0
+        estimated_spend_usd += estimated_cost_per_request or 0.0
         if annotate_frames:
             record.update(_frame_annotation(
                 len(results),
@@ -212,6 +270,14 @@ def run_campaign(
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "campaign": {
             "budget": budget,
+            "max_candidates": budget,
+            "max_build_attempts": max_build_attempts,
+            "build_attempts": build_attempts,
+            "max_usd": max_usd,
+            "estimated_cost_per_request_usd": estimated_cost_per_request,
+            "estimated_spend_usd": round(estimated_spend_usd, 8),
+            "campaign_plan": campaign_plan,
+            "campaign_plan_sha256": campaign_plan_sha256,
             "case_ids": [case.case_id for case in selected_cases],
             "attempts": len(results),
             "variants_per_case_max": variants,
