@@ -46,10 +46,18 @@ class Store:
         row=self.conn.execute("SELECT * FROM runs WHERE id=?",(rid,)).fetchone(); return dict(row) if row else {}
     def get_results(self,rid):
         return [dict(x) for x in self.conn.execute("SELECT * FROM results WHERE run_id=? ORDER BY id",(rid,))]
-    def get_adjudicated_results(self,rid):
-        return [dict(x) for x in self.conn.execute("""SELECT r.*,a.label AS adjudicated_label,a.notes AS adjudication_notes,a.adjudicated_at
-            FROM results r JOIN adjudications a ON a.result_id=r.id
-            WHERE r.run_id=? AND a.id=(SELECT MAX(a2.id) FROM adjudications a2 WHERE a2.result_id=r.id) ORDER BY r.id""",(rid,))]
+    def get_adjudicated_results(self,rid,reviewer=None):
+        if reviewer is None:
+            query="""SELECT r.*,a.label AS adjudicated_label,a.notes AS adjudication_notes,a.adjudicated_at,a.reviewer
+                FROM results r JOIN adjudications a ON a.result_id=r.id
+                WHERE r.run_id=? AND a.id=(SELECT MAX(a2.id) FROM adjudications a2 WHERE a2.result_id=r.id) ORDER BY r.id"""
+            params=(rid,)
+        else:
+            query="""SELECT r.*,a.label AS adjudicated_label,a.notes AS adjudication_notes,a.adjudicated_at,a.reviewer
+                FROM results r JOIN adjudications a ON a.result_id=r.id AND a.reviewer=?
+                WHERE r.run_id=? AND a.id=(SELECT MAX(a2.id) FROM adjudications a2 WHERE a2.result_id=r.id AND a2.reviewer=?) ORDER BY r.id"""
+            params=(reviewer,rid,reviewer)
+        return [dict(x) for x in self.conn.execute(query,params)]
     def get_results_with_adjudication(self,rid,reviewer=None):
         if reviewer is None:
             query="""SELECT r.*,a.label AS adj_label,a.notes AS adj_notes,a.adjudicated_at AS adj_at,a.reviewer AS adj_reviewer
