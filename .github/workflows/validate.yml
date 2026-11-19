@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Compile every Python source and test file
-        run: python -m compileall -q modules src tests
+        run: python -m compileall -q modules src tests omjb
       - name: Validate benchmark
         run: |
           python -m src.validate data/benchmark_v0.3.jsonl
@@ -42,5 +42,10 @@ jobs:
         run: python -m modules.guardrail_lab --list
       - name: Smoke-test original source corpus browser
         run: python -m modules.original_source_corpus --search gemini
+      - name: Smoke-test OMJB package and existing-suite adapter
+        run: |
+          python -m omjb.cli --help
+          python -m omjb.cli --db /tmp/omjb-ci.sqlite run --suite guardrail-lab --case GL-001 --name ci-adapter-smoke --target echo
+          python -m omjb.cli --db /tmp/omjb-ci.sqlite report 1
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
