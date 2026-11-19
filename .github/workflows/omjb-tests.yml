@@ -1,7 +1,7 @@
 name: OMJB tests
 on:
   pull_request:
-    branches: [main, feat/async-provider-evaluation]
+    branches: [main, feat/async-provider-evaluation, feat/professional-mutation-engine-integrated]
     paths:
       - "omjb/**"
       - "tests/test_omjb.py"
@@ -10,11 +10,12 @@ on:
       - "tests/test_real_parquet_corpus.py"
       - "tests/test_async_provider_eval.py"
       - "tests/test_mutations.py"
+      - "tests/test_mutation_engine.py"
       - "corpus/omjb_probes.json"
       - "pyproject.toml"
       - ".github/workflows/omjb-tests.yml"
   push:
-    branches: [main, feat/async-provider-evaluation]
+    branches: [main, feat/async-provider-evaluation, feat/professional-mutation-engine-integrated]
     paths:
       - "omjb/**"
       - "tests/test_omjb.py"
@@ -43,3 +44,4 @@ jobs:
           OMJB_RUN_EXTERNAL_CORPUS_TESTS: '1'
       - run: python -m unittest discover -s tests -p 'test_async_provider_eval.py' -v
       - run: python -m unittest discover -s tests -p 'test_mutations.py' -v
+      - run: python -m unittest discover -s tests -p 'test_mutation_engine.py' -v
