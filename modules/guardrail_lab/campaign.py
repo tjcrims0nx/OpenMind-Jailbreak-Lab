@@ -22,6 +22,7 @@ from typing import Callable, Dict, List, Optional
 from . import __version__
 from .cases import CASES
 from .runner import run_case, _summary, _select_cases, GuardrailRunError
+from .campaign_history import CampaignHistoryStore, campaign_test_key
 
 # Fixed wrappers preserve the underlying test and its harmless canary.
 VARIANTS = (
@@ -122,6 +123,8 @@ def run_campaign(
     frame_variant: Optional[str] = None,
     shape_variant: Optional[str] = None,
     annotate_frames: bool = True,
+    history_path: Optional[str] = None,
+    resume: bool = True,
 ) -> Dict:
     if frame_variant is not None and frame_variant not in FRAME_VARIANTS:
         raise ValueError(f"frame_variant must be one of {FRAME_VARIANTS}")
@@ -190,8 +193,35 @@ def run_campaign(
         ensure_ascii=False,
     ).encode("utf-8")).hexdigest()
 
-    started = time.monotonic()
+    history_store = CampaignHistoryStore(history_path) if history_path else None
+    history_snapshot = history_store.snapshot() if history_store else None
+    attempted_keys = (
+        history_snapshot["attempted_test_keys"]
+        if history_store and resume else set()
+    )
     queue = [(case, 0) for case in selected_cases]
+    if history_store and resume:
+        # Only a human-approved exact-canary result may seed later fixed
+        # framings. Machine assessments remain pending until reviewed.
+        for case in selected_cases:
+            for reviewed in history_snapshot["reviewed_by_test_key"].values():
+                prior_result = reviewed["result"]
+                if (
+                    reviewed["decision"] == "approved"
+                    and prior_result.get("case_id") == case.case_id
+                    and prior_result.get("assessment") == "potential_guardrail_failure"
+                ):
+                    for next_index in range(1, variants):
+                        queue.append((case, next_index))
+                    break
+        queue = [
+            (case, index) for case, index in queue
+            if campaign_test_key(
+                case.case_id, VARIANTS[index][0], FRAME_SET_HASH,
+                frame_variant, shape_variant,
+            ) not in attempted_keys
+        ]
+    started = time.monotonic()
     results: List[Dict] = []
     expanded = set()
     paired_conversation = []
@@ -246,6 +276,16 @@ def run_campaign(
             if shape_variant is not None:
                 record["shape_variant"] = shape_variant
         results.append(record)
+        if history_store:
+            key = campaign_test_key(
+                case.case_id, variant_name, FRAME_SET_HASH,
+                record.get("frame_variant"), record.get("shape_variant"),
+            )
+            history_store.record_result(
+                test_key=key,
+                campaign_plan_sha256=campaign_plan_sha256,
+                result=record,
+            )
 
         # Circuit breaker: do not continue sending requests after a
         # Cloudflare 1010 access block.
@@ -258,7 +298,9 @@ def run_campaign(
 
         # Adaptive expansion is evidence-triggered and bounded: only a harmless
         # canary signal earns additional fixed framings for that same case.
-        if adaptive and record["assessment"] == "potential_guardrail_failure" and case.case_id not in expanded:
+        if (adaptive and history_store is None
+                and record["assessment"] == "potential_guardrail_failure"
+                and case.case_id not in expanded):
             expanded.add(case.case_id)
             for next_index in range(1, variants):
                 queue.insert(next_index - 1, (case, next_index))
@@ -293,6 +335,9 @@ def run_campaign(
             "estimated_spend_usd": round(estimated_spend_usd, 8),
             "campaign_plan": campaign_plan,
             "campaign_plan_sha256": campaign_plan_sha256,
+            "history_path": history_path,
+            "resumed_from_history": bool(history_store and resume),
+            "history_attempted_before_run": len(attempted_keys),
             "case_ids": [case.case_id for case in selected_cases],
             "attempts": len(results),
             "variants_per_case_max": variants,
