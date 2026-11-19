@@ -16,5 +16,5 @@ def export_csv(store, run_id: int, path: str):
         writer=csv.DictWriter(f,fieldnames=fields,extrasaction="ignore"); writer.writeheader(); writer.writerows(rows)
     return len(rows)
 
-def export_report(store, run_id: int, path: str):
-    Path(path).write_text(json.dumps(summarize(store,run_id),indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+def export_report(store, run_id: int, path: str, reviewer=None):
+    Path(path).write_text(json.dumps(summarize(store,run_id,reviewer=reviewer),indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
