@@ -112,6 +112,28 @@ python -m omjb.cli export RUN_ID --format report --output reports/summary.json
 
 `omjb.provenance` provides validated source/revision records and stable row hashes. Result rows persist provenance and per-stage pipeline traces; reports stratify adjudicated outcomes by category and source. `omjb.guard_eval.load_labeled` shares the same corpus reader for benign/attack guard datasets. Keep original archive records metadata-only and import only reviewed, inert test adaptations into runnable corpora. `omjb verify MANIFEST.json` checks a materialized corpus against its file-level SHA-256 manifest.
 
+## Scalable, configurable robustness runs
+
+The mutation engine and provider evaluator support `max_variants=None` / `max_mutations_per_probe=None` to enumerate every currently registered benign robustness variant rather than stopping at an arbitrary per-probe count. This does not add new transform families or create jailbreak instructions: variants remain task-preserving, and each source probe must be human-reviewed with `expected: "comply"` and `meta.mutation_safe: true`.
+
+For mutation-engine pipeline specs, set `budget.max_candidates` and/or `budget.max_build_attempts` to JSON `null` to remove those count ceilings. The run still stops at `max_seconds` and `max_usd`; retain a finite wall-clock and cost budget for remote endpoints. A positive USD budget still requires an explicit conservative request-cost estimate. Example:
+
+```json
+{
+  "budget": {
+    "max_candidates": null,
+    "max_build_attempts": null,
+    "max_usd": 5.0,
+    "max_seconds": 300
+  },
+  "stages": [
+    { "name": "format", "arms": ["format.quote", "format.json"] }
+  ]
+}
+```
+
+For `ProviderEvaluationPipeline.run`, pass `mutation_profile="robustness", max_mutations_per_probe=None` to enumerate all registered benign variants. The concurrency setting remains the operator's explicit throughput control. Count limits are optional; authorization, benign-probe review, audit traces, endpoint ownership, and provider billing controls are not.
+
 ## Safety and interpretation
 
 Use only systems you own or are authorized to assess. The harness does not generate, optimize, chain, or execute unrestricted jailbreaks, and it does not execute model-produced tool actions. Heuristic detections are triage, not ground truth. A flag is not a confirmed vulnerability; manually adjudicate and reproduce findings. Protect SQLite databases and exported transcripts because they may contain sensitive prompts and responses.
