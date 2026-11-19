@@ -1,38 +1,62 @@
 # OMJB: OpenMind evaluation harness
 
-This dependency-free subsystem adds repeatable provider-backed evaluation, SQLite evidence capture, heuristic triage, regression comparisons, and human adjudication.
+OMJB is an additive, provider-neutral evaluation package. It does not replace the repository's Guardrail Lab, 76-case suite, benchmark, scanner, original-source metadata browser, or manual-review workspace.
 
-## Run
+## Install and run
 
-From the repository root (Python 3.10+):
+Python 3.10+; standard library only for the core package.
 
-    python -m omjb.cli run --probes corpus/omjb_probes.json --name dry-run --target echo
-    python -m omjb.cli list
-    python -m omjb.cli report 1
-    python -m omjb.cli adjudicate 1
-    python -m omjb.cli regress 1 2
+```bash
+python -m unittest discover -s tests -p 'test_omjb.py' -v
+python -m omjb.cli run --probes corpus/omjb_probes.json --name offline-check --target echo
+python -m omjb.cli list
+python -m omjb.cli report 1
+python -m omjb.cli adjudicate 1
+python -m omjb.cli regress 1 2
+python -m omjb.cli export 1 --format jsonl --output reports/run.jsonl
+```
 
-For a live OpenAI-compatible run, set a provider key in the environment; never put credentials in arguments or committed files:
+Install with `pip install .`; this adds the `omjb` console command. Optional YAML support: `pip install '.[yaml]'`. JSON and JSONL work without dependencies.
 
-    export OPENAI_API_KEY="..."
-    python -m omjb.cli run --probes corpus/omjb_probes.json --name baseline --target openai --model gpt-4o-mini
+## Providers
 
-Targets: openai (OpenAI-compatible Chat Completions), anthropic, ollama, and echo. Hosted endpoints require HTTPS; local Ollama is restricted to localhost unless using HTTPS. Generation parameters are allowlisted so callers cannot override model, messages, or endpoint routing.
+Supported targets: Echo, OpenAI-compatible Chat Completions, Anthropic Messages, Google Gemini generateContent, and Ollama. Put credentials in environment variables, never source files:
 
-## Evidence and interpretation
+- OpenAI-compatible: `OPENAI_API_KEY`
+- Anthropic: `ANTHROPIC_API_KEY`
+- Gemini: `GEMINI_API_KEY`
 
-Each result stores the exact probe, response, SHA-256 response digest, model configuration (never the API key), heuristic label, timestamp, and optional human adjudication. The detector is deliberately conservative and is not ground truth. A heuristic flag is not a confirmed bypass; quoted discussion, partial answers, and benign-control false positives require human review. Automated labels remain separate from adjudicated labels.
+Example Gemini run:
 
-## Safety and limits
+```bash
+export GEMINI_API_KEY="YOUR_API_KEY"
+python -m omjb.cli run --probes corpus/omjb_probes.json --name gemini-baseline --target gemini --model gemini-2.5-flash
+```
 
-Use only systems you own or are explicitly authorized to evaluate. The corpus is for benign controls and safe boundary calibration. The harness does not generate, optimize, chain, or execute jailbreaks; it does not execute model-produced tool calls or actions. Keep tests synthetic and bounded. Live provider requests can incur charges and reports may contain sensitive prompts and responses, so protect the SQLite database.
+Hosted endpoints require HTTPS. Ollama is restricted to localhost or HTTPS. Generation parameters are allowlisted; model, message and routing fields cannot be overridden through generation parameters. Live requests may incur provider charges.
 
-## Layout
+## Data and guards
 
-- targets.py: Echo, OpenAI-compatible, Anthropic, and Ollama adapters.
-- probes.py: strict JSON corpus loader.
-- detectors.py: heuristic triage.
-- storage.py: SQLite evidence and adjudication.
-- runner.py: sequential, paced orchestration with per-case error capture.
-- report.py: summaries and regression diffs.
-- cli.py: command-line interface.
+Probe files may be JSON arrays, JSONL records, or YAML lists (YAML requires PyYAML). Each record requires a non-empty prompt and unique ID. Optional provenance is carried as metadata; a record explicitly marked `runnable: false` is rejected by the runner loader.
+
+Composable keyword, regex and composite guards are available in `omjb.guard`. The CLI exposes keyword review/block controls at input and output stages. A blocked input is not sent to the provider. A blocked output is quarantined in the evidence record and marked for review. A review decision is recorded but does not silently block. These are defensive controls, not jailbreak generation or bypass optimization.
+
+## Evidence, adjudication and metrics
+
+SQLite stores run configuration without API keys, prompts, responses, response SHA-256 digests, heuristic triage, guard observations and human adjudications. Existing databases are upgraded additively; tables are not dropped. Manual labels are stored separately from model/heuristic labels.
+
+Reports show heuristic signals separately from adjudication-based precision, recall, F1 and Wilson confidence intervals. Only adjudicated refusal/compliance pairs are scored; partial, unclear, skip and unreviewed records are excluded. Regression compares stable probe IDs and reports added/removed cases.
+
+Exports:
+
+```bash
+python -m omjb.cli export RUN_ID --format jsonl --output reports/run.jsonl
+python -m omjb.cli export RUN_ID --format csv --output reports/run.csv
+python -m omjb.cli export RUN_ID --format report --output reports/summary.json
+```
+
+`omjb.provenance` provides source SHA-256 manifests. Keep original archive records metadata-only and import only reviewed, inert test adaptations into runnable corpora.
+
+## Safety and interpretation
+
+Use only systems you own or are authorized to assess. The harness does not generate, optimize, chain, or execute unrestricted jailbreaks, and it does not execute model-produced tool actions. Heuristic detections are triage, not ground truth. A flag is not a confirmed vulnerability; manually adjudicate and reproduce findings. Protect SQLite databases and exported transcripts because they may contain sensitive prompts and responses.
