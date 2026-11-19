@@ -4,7 +4,9 @@ from omjb.storage import Store
 from omjb.guard import KeywordGuard
 from omjb.guard_eval import evaluate
 from omjb.guard_review import pending,adjudicate,summary
-from omjb.probes import Probe\nfrom omjb.targets import EchoTarget\nfrom omjb.runner import run
+from omjb.probes import Probe
+from omjb.targets import EchoTarget
+from omjb.runner import run
 
 class GuardReviewTests(unittest.TestCase):
     def test_reviewer_scoped_model_adjudication_is_backward_compatible(self):
