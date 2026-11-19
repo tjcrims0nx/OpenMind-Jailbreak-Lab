@@ -4,7 +4,7 @@ import bz2,gzip,json
 from pathlib import Path
 from typing import Iterable
 
-LIST_KEYS=("probes","samples","rows","items","data","examples","records","attacks","instructions")
+LIST_KEYS=("probes","samples","rows","items","data","examples","records","attacks","instructions","prompts","dataset")
 
 def _open(path):
     p=str(path).lower()
