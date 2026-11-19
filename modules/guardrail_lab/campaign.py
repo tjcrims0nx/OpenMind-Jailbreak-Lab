@@ -257,11 +257,14 @@ def run_campaign(
             for next_index in range(1, variants):
                 queue.insert(next_index - 1, (case, next_index))
 
-        if delay_seconds and queue and len(results) < budget:
+        if delay_seconds and queue and (
+            budget is None or len(results) < budget
+        ):
             pause = delay_seconds
             if max_seconds is not None:
                 remaining = max_seconds - (time.monotonic() - started)
                 if remaining <= 0:
+                    halt_reason = "max_seconds"
                     break
                 pause = min(pause, remaining)
             time.sleep(pause)
