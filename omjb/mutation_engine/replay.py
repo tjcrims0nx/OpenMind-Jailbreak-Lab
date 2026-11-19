@@ -23,33 +23,36 @@ def _load_trace(path: str | Path) -> dict[str, dict[str, Any]]:
             key = record.get("key") or record.get("payload_sha256")
             if not isinstance(key, str) or not key:
                 raise ValueError(f"{path}:{line_number}: candidate requires key or payload_sha256")
-            if not isinstance(record.get("allowed"), bool):
-                raise ValueError(f"{path}:{line_number}: candidate allowed must be boolean")
             if key in records:
                 raise ValueError(f"{path}:{line_number}: duplicate candidate key {key!r}")
-            records[key] = record
+            # Failed submissions are not equivalent to a guardrail block.
+            if record.get("error"):
+                records[key] = {"key": key, "outcome": "error"}
+                continue
+            if not isinstance(record.get("allowed"), bool):
+                raise ValueError(f"{path}:{line_number}: candidate allowed must be boolean")
+            records[key] = {"key": key, "outcome": "allow" if record["allowed"] else "block"}
     return records
 
 
 def compare_traces(baseline_path: str | Path, candidate_path: str | Path) -> dict[str, Any]:
-    """Match candidates by stable dedup key and report decision flips.
-
-    Missing keys are reported separately; duplicate keys and malformed records fail
-    closed rather than silently choosing one observation.
-    """
+    """Match candidates by stable key and report decision flips and inconclusive rows."""
     baseline = _load_trace(baseline_path)
     candidate = _load_trace(candidate_path)
     common = sorted(baseline.keys() & candidate.keys())
     flips = []
+    inconclusive = []
     for key in common:
-        before = baseline[key]["allowed"]
-        after = candidate[key]["allowed"]
-        if before != after:
+        before = baseline[key]["outcome"]
+        after = candidate[key]["outcome"]
+        if "error" in (before, after):
+            inconclusive.append({"key": key, "baseline": before, "candidate": after})
+        elif before != after:
             flips.append({
                 "key": key,
-                "baseline": "allow" if before else "block",
-                "candidate": "allow" if after else "block",
-                "change": "block_to_allow" if after else "allow_to_block",
+                "baseline": before,
+                "candidate": after,
+                "change": "block_to_allow" if after == "allow" else "allow_to_block",
             })
     return {
         "baseline_count": len(baseline),
@@ -57,6 +60,7 @@ def compare_traces(baseline_path: str | Path, candidate_path: str | Path) -> dic
         "matched_count": len(common),
         "baseline_only": sorted(baseline.keys() - candidate.keys()),
         "candidate_only": sorted(candidate.keys() - baseline.keys()),
+        "inconclusive": inconclusive,
         "flips": flips,
         "allow_to_block": sum(item["change"] == "allow_to_block" for item in flips),
         "block_to_allow": sum(item["change"] == "block_to_allow" for item in flips),
