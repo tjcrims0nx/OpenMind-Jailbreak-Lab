@@ -70,6 +70,10 @@ FRAME_SET_HASH = hashlib.sha256(json.dumps(
     {"frames": FRAME_VARIANTS, "shapes": SHAPE_VARIANTS},
     sort_keys=True, separators=(",", ":"),
 ).encode("utf-8")).hexdigest()
+VARIANT_SET_HASH = hashlib.sha256(json.dumps(
+    {"variants": VARIANTS},
+    sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+).encode("utf-8")).hexdigest()
 
 
 def _frame_annotation(index, shape_variant=None):
@@ -166,6 +170,8 @@ def run_campaign(
 
     campaign_plan = {
         "algorithm": "fixed-reviewed-framings-v1",
+        "variant_set_sha256": VARIANT_SET_HASH,
+        "frame_set_sha256": FRAME_SET_HASH,
         "case_ids": [case.case_id for case in selected_cases],
         "variants": variants,
         "adaptive": adaptive,
@@ -294,6 +300,7 @@ def run_campaign(
             "frame_variants": FRAME_VARIANTS,
             "shape_variants": SHAPE_VARIANTS,
             "frame_set_hash": FRAME_SET_HASH,
+            "variant_set_hash": VARIANT_SET_HASH,
             "frame_design": "controlled, neutral, non-adaptive, frozen decoding; INFERRED/UNTESTED transfer from frame-sensitivity observations on a different checkpoint",
             "delay_seconds": delay_seconds,
             "max_seconds": max_seconds,
