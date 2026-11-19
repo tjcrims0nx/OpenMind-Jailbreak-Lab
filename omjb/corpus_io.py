@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterable
 
 LIST_KEYS=("probes","samples","rows","items","data","examples","records","attacks","instructions","prompts","dataset")
+SPLIT_KEYS=("train","validation","valid","test","dev")
 
 def _open(path):
     p=str(path).lower()
@@ -29,6 +30,11 @@ def _records(data,path):
     for key in LIST_KEYS:
         if isinstance(data.get(key),list):
             yield from data[key]; return
+    split_lists=[(k,v) for k,v in data.items() if k in SPLIT_KEYS and isinstance(v,list)]
+    if split_lists and all(all(isinstance(row,dict) for row in values) for _,values in split_lists):
+        for split,values in split_lists:
+            for row in values: yield {**row,"_split":split}
+        return
     lists=[(k,v) for k,v in data.items() if isinstance(v,list)]
     if len(lists)==1:
         yield from lists[0][1]; return
