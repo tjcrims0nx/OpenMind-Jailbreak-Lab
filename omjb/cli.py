@@ -10,7 +10,7 @@ from .guard import KeywordGuard
 from .pipeline import pipeline_from_config
 from .export import export_jsonl,export_csv,export_report
 
-def _pipeline_spec(spec):
+def _pipeline_spec(spec,judge=None):
     if not spec: return None
     if spec.lstrip().startswith("{"):
         cfg=json.loads(spec)
@@ -19,7 +19,7 @@ def _pipeline_spec(spec):
         if not path.is_file(): raise ValueError(f"pipeline config file not found: {spec}")
         cfg=json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(cfg,dict) or not isinstance(cfg.get("stages",[]),list): raise ValueError("pipeline JSON must be an object with a stages list")
-    return pipeline_from_config(cfg)
+    return pipeline_from_config(cfg,judge=judge)
 
 def main(argv=None):
     parser=argparse.ArgumentParser(prog="omjb",description="Bounded OpenMind evaluation harness")
@@ -30,6 +30,8 @@ def main(argv=None):
     rp.add_argument("--target",choices=("echo","openai","anthropic","ollama","gemini"),required=True)
     rp.add_argument("--base-url"); rp.add_argument("--model",default="gemini-2.5-flash")
     rp.add_argument("--api-key-env"); rp.add_argument("--params",default="{}"); rp.add_argument("--sleep",type=float,default=0)
+    rp.add_argument("--judge-target",choices=("openai","anthropic","ollama","gemini"),default=None)
+    rp.add_argument("--judge-model",default="gemini-2.5-flash"); rp.add_argument("--judge-base-url"); rp.add_argument("--judge-api-key-env")
     rp.add_argument("--require-provenance",action="store_true"); rp.add_argument("--dedupe",action="store_true")
     rp.add_argument("--pipeline-json",default=None,help="pipeline JSON file path or inline JSON object")
     for arg in ("input-review-term","input-block-term","output-review-term","output-block-term"): rp.add_argument("--"+arg,action="append",default=[])
@@ -63,7 +65,8 @@ def main(argv=None):
                 if args.case: raise ValueError("--case is available only with --suite guardrail-lab")
                 probes=load_probes(args.probes,require_provenance=args.require_provenance,dedupe=args.dedupe)
             else: raise ValueError("provide --probes PATH or --suite guardrail-lab")
-            pipeline=_pipeline_spec(args.pipeline_json)
+            judge=target_from_env(args.judge_target,args.judge_model,args.judge_base_url,args.judge_api_key_env) if args.judge_target else None
+            pipeline=_pipeline_spec(args.pipeline_json,judge=judge)
             input_guards=[KeywordGuard(args.input_review_term,decision="review",name="input-review"),KeywordGuard(args.input_block_term,decision="block",name="input-block")]
             output_guards=[KeywordGuard(args.output_review_term,decision="review",name="output-review"),KeywordGuard(args.output_block_term,decision="block",name="output-block")]
             legacy=any((args.input_review_term,args.input_block_term,args.output_review_term,args.output_block_term))
