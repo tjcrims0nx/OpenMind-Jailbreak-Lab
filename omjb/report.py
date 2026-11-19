@@ -1,5 +1,5 @@
 """Reports separate heuristic signals from human adjudication."""
-from .stats import classification_metrics,wilson_interval
+from .stats import classification_metrics,wilson_interval,cohen_kappa
 from .storage import Store
 
 def adjudicated_summary(store,run_id):
@@ -13,7 +13,9 @@ def adjudicated_summary(store,run_id):
         cat=r["probe_category"] or "unknown"; b=by.setdefault(cat,{"n":0,"human_compliance":0})
         b["n"]+=1; b["human_compliance"]+=int(r["adjudicated_label"]=="compliance")
     for b in by.values(): b["human_compliance_rate"]=b["human_compliance"]/b["n"]
+    comparable=[r for r in scored if r["detector_label"] in ("refusal","compliance")]
     metrics=classification_metrics([{"predicted_label":r["detector_label"],"adjudicated_label":r["adjudicated_label"]} for r in scored])
+    kappa=cohen_kappa([r["detector_label"] for r in comparable],[r["adjudicated_label"] for r in comparable])
     provenance={}
     for r in scored:
         try: source=(__import__("json").loads(r.get("provenance") or "{}").get("source") or "unknown")
@@ -23,7 +25,7 @@ def adjudicated_summary(store,run_id):
     for b in provenance.values(): b["human_compliance_rate"]=b["human_compliance"]/b["n"]
     return {"run_id":run_id,"n_adjudicated":len(rows),"n_scored":len(scored),
         "human_bypass_n":n_comp,"human_bypass_rate":n_comp/len(scored) if scored else None,
-        "human_bypass_ci_95":lohi,"detector_vs_human":metrics,
+        "human_bypass_ci_95":lohi,"detector_vs_human":metrics,"detector_vs_human_kappa":kappa,
         "by_category":by,"by_provenance":provenance,
         "note":"Human compliance labels are the measured outcome; detector labels are compared separately."}
 
@@ -52,6 +54,16 @@ def regress(store,baseline_id,candidate_id):
         if b["bypass"]==1 and c["bypass"]!=1: fixed.append(pid)
         elif b["bypass"]!=1 and c["bypass"]==1: reintroduced.append(pid)
         elif b["detector_label"]!=c["detector_label"]: changed.append([pid,b["detector_label"],c["detector_label"]])
+    base_adj={r["probe_id"]:r["adjudicated_label"] for r in store.get_adjudicated_results(baseline_id)}
+    cand_adj={r["probe_id"]:r["adjudicated_label"] for r in store.get_adjudicated_results(candidate_id)}
+    human_fixed=[]; human_reintroduced=[]; human_changed=[]
+    for pid,label in cand_adj.items():
+        old=base_adj.get(pid)
+        if old=="compliance" and label=="refusal": human_fixed.append(pid)
+        elif old=="refusal" and label=="compliance": human_reintroduced.append(pid)
+        elif old and old!=label: human_changed.append([pid,old,label])
     return {"fixed":fixed,"reintroduced":reintroduced,"changed":changed,
+        "human_adjudicated_fixed":human_fixed,"human_adjudicated_reintroduced":human_reintroduced,
+        "human_adjudicated_changed":human_changed,
         "baseline_only":sorted(set(base)-set(cand)),"candidate_only":sorted(set(cand)-set(base)),
-        "note":"Heuristic regression signals only; adjudicated labels are reported in run summaries."}
+        "note":"Heuristic and human-adjudicated regression are reported separately; only human labels count as reviewed outcomes."}
