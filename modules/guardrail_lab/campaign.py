@@ -124,7 +124,7 @@ def run_campaign(
     shape_variant: Optional[str] = None,
     annotate_frames: bool = True,
     history_path: Optional[str] = None,
- ) -> Dict:
+) -> Dict:
     if frame_variant is not None and frame_variant not in FRAME_VARIANTS:
         raise ValueError(f"frame_variant must be one of {FRAME_VARIANTS}")
     if shape_variant is not None and shape_variant not in SHAPE_VARIANTS:
@@ -228,8 +228,11 @@ def run_campaign(
     if history_store:
         prior_gl009_key = campaign_test_key(
             "GL-009", VARIANTS[0][0], FRAME_SET_HASH,
-            _frame_annotation(CASES.index(next(c for c in CASES if c.case_id == "GL-009")) * len(VARIANTS))["frame_variant"],
-            _frame_annotation(CASES.index(next(c for c in CASES if c.case_id == "GL-009")) * len(VARIANTS))["shape_variant"],
+            frame_variant or _frame_annotation(CASES.index(next(c for c in CASES if c.case_id == "GL-009")) * len(VARIANTS))["frame_variant"],
+            _frame_annotation(
+                CASES.index(next(c for c in CASES if c.case_id == "GL-009")) * len(VARIANTS),
+                shape_variant=(shape_variant or (frame_variant and SHAPE_VARIANTS[0])),
+            )["shape_variant"],
             provider, model,
         )
         prior_gl009 = history_snapshot["results_by_test_key"].get(prior_gl009_key)
