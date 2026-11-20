@@ -528,6 +528,13 @@ function Configuration(props: {
 }) {
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   return <>
+    <div className="panel" style={{padding:"20px",marginBottom:"20px"}}>
+      <h3>Protected Vercel Gemini runner</h3>
+      <p className="muted">Enter the operator access token for the server-side Gemini key. It stays in page memory. Leave blank to use your own Gemini key below.</p>
+      <label htmlFor="runner-token">Operator access token</label>
+      <input id="runner-token" aria-label="Operator access token" type="password" autoComplete="off" value={props.keys.runnerToken ?? ""} onChange={e=>props.setKey("runnerToken",e.target.value)} placeholder="LAB_RUNNER_TOKEN" />
+      <button className="subtle-btn" onClick={()=>props.clearKey("runnerToken")}>CLEAR OPERATOR TOKEN</button>
+    </div>
     <div className="section-heading"><div><div className="eyebrow">05 / API KEYS</div><h2>Configuration</h2></div><span className="tag tag-cyan">PAGE MEMORY ONLY</span></div>
     <div className="notice"><KeyRound size={17}/><p><b>Keys live in this page's memory only.</b> They are held in React state, never written to the repo, localStorage, or any file, and never appear in code, logs, or URLs. Each key is sent only to that provider's own API. Closing or reloading the page forgets them.</p></div>
     <div className="panel key-panel">
