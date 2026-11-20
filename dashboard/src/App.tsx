@@ -476,6 +476,30 @@ function Campaign(props: {
   const [delayDraft, setDelayDraft] = useState(String(delay));
   useEffect(() => { setDelayDraft(String(delay)); }, [delay]);
   const buckets = useMemo(() => summaryBuckets(run.results), [run.results]);
+  const [adjudications, setAdjudications] = useState<Record<string, "boundary_held" | "confirmed_failure" | "needs_review">>({});
+  const unresolved = run.results.filter(r => r.assessment === "manual_review" || r.assessment === "ambiguous_canary_mention");
+  const reviewedCount = unresolved.filter(r => adjudications[r.case_id]).length;
+  function exportAdjudications() {
+    const payload = {
+      schema_version: "1.0",
+      kind: "human_adjudication",
+      exported_at: new Date().toISOString(),
+      original_report: run.report,
+      reviews: unresolved.filter(r => adjudications[r.case_id]).map(r => ({
+        case_id: r.case_id,
+        original_assessment: r.assessment,
+        reviewer_decision: adjudications[r.case_id],
+        response: r.response,
+      })),
+      unreviewed_case_ids: unresolved.filter(r => !adjudications[r.case_id]).map(r => r.case_id),
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"}));
+    const a = document.createElement("a");
+    a.href = url; a.download = "guardrail-reviewed-results.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   const selectedCount = props.cases ? selectCases(props.cases, scope, singleId).length : 0;
   const pct = run.total > 0 ? Math.round((run.done / run.total) * 100) : 0;
 
@@ -542,6 +566,18 @@ function Campaign(props: {
             <td>{r.response ? r.response.slice(0, 200) : (r.error ? `error: ${r.error.message}`.slice(0, 200) : "")}</td>
           </tr>)}</tbody>
         </table></div>}
+        {unresolved.length > 0 && <div className="panel" style={{marginTop:16,padding:16}}>
+          <div className="panel-head"><div><span className="panel-kicker">HUMAN ADJUDICATION</span><h3>Review ambiguous results ({reviewedCount}/{unresolved.length})</h3></div></div>
+          <p className="muted">A marker quoted during analysis is not automatically a bypass. Read each response and select a decision. Original automated assessments remain unchanged.</p>
+          {unresolved.map(r => <div key={r.case_id} style={{padding:"12px 0",borderBottom:"1px solid var(--border, #333)"}}>
+            <b>{r.case_id}</b> <span className="tag tag-muted">{r.assessment}</span>
+            <pre style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",fontSize:12,maxHeight:180,overflowY:"auto",marginTop:8}}>{r.response || r.error?.message || "No response"}</pre>
+            <label style={{display:"block",marginTop:8}}>Reviewer decision: <select aria-label={`Review ${r.case_id}`} value={adjudications[r.case_id] || ""} onChange={e=>setAdjudications(prev=>({...prev,[r.case_id]:e.target.value as "boundary_held"|"confirmed_failure"|"needs_review"}))}>
+              <option value="">Not reviewed</option><option value="boundary_held">Boundary held (reviewed)</option><option value="confirmed_failure">Confirmed failure</option><option value="needs_review">Needs further review</option>
+            </select></label>
+          </div>)}
+          <button className="subtle-btn" style={{marginTop:12}} disabled={reviewedCount===0} onClick={exportAdjudications}><Download size={13}/> EXPORT REVIEWED RESULTS ({reviewedCount})</button>
+        </div>}
         {run.report && <div className="results-actions" style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}><button className="subtle-btn" onClick={props.onDownload}><Download size={13}/> DOWNLOAD JSON</button><button className="subtle-btn" onClick={props.onDownloadCsv}><Download size={13}/> DOWNLOAD CSV</button><button className="subtle-btn" onClick={props.onShare}>SHARE SUMMARY</button></div>}
       </div>
     </div>
