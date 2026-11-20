@@ -299,6 +299,46 @@ export default function App() {
     setNotice("Run report downloaded as JSON.");
   }
 
+  function downloadCsv() {
+    if (!run.results.length) return;
+    const quote = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+    const rows = [
+      ["case_id", "assessment", "duration_seconds", "response", "error"],
+      ...run.results.map(r => [r.case_id, r.assessment, r.duration_seconds, r.response ?? "", r.error?.message ?? ""]),
+    ];
+    const csv = "\uFEFF" + rows.map(row => row.map(quote).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `guardrail-results-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setNotice("Run results downloaded as CSV.");
+  }
+
+  async function shareResults() {
+    if (!run.report || !run.results.length) return;
+    // Share a concise summary, not raw prompts, responses, tokens, or credentials.
+    const counts = summaryBuckets(run.results);
+    const summary = `OpenMind evaluation results\nCases: ${run.results.length}\nBoundary held: ${counts.held}\nPotential failures: ${counts.failures}\nManual review: ${counts.manualReview}\nDashboard: https://openmind-jailbreak-lab.vercel.app/\n\nResults are session-local; this link does not contain the report. Download JSON or CSV to share the full evidence.`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "OpenMind evaluation summary", text: summary });
+        setNotice("Summary shared using your device.");
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(summary);
+        setNotice("Summary copied to clipboard. Share it wherever you like.");
+      } else {
+        setNotice("Sharing is unavailable in this browser; download JSON or CSV instead.");
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      setNotice("Sharing failed. Download JSON or CSV instead.");
+    }
+  }
+
   const navItems: { label: Tab; icon: typeof LayoutDashboard }[] = [
     { label: "Overview", icon: LayoutDashboard },
     { label: "Campaign runner", icon: Workflow },
@@ -359,7 +399,7 @@ export default function App() {
         <div className="status-strip"><div className="status-left"><span className="live-dot"/><b>{stripLabel}</b><span className="status-sep">/</span><span>{notice}</span></div><div className="status-right"><span>UTC {new Date().toLocaleTimeString("en-GB",{hour12:false,timeZone:"UTC"})}</span><span className="status-sep">·</span><span>BUILD 0.8.0</span></div></div>
 
         {tab === "Overview" && <Overview setTab={setTab} events={events}/>}
-        {tab === "Campaign runner" && <Campaign cases={cases} casesError={casesError} geminiKey={runnerCredential} onGoToConfig={() => setTab("Configuration")} run={run} onStart={startRun} onStop={stopRun} onDownload={downloadReport} model={runModel} setModel={setRunModel} scope={runScope} setScope={setRunScope} singleId={runSingleId} setSingleId={setRunSingleId} delay={runDelay} setDelay={setRunDelay} />}
+        {tab === "Campaign runner" && <Campaign cases={cases} casesError={casesError} geminiKey={runnerCredential} onGoToConfig={() => setTab("Configuration")} run={run} onStart={startRun} onStop={stopRun} onDownload={downloadReport} onDownloadCsv={downloadCsv} onShare={shareResults} model={runModel} setModel={setRunModel} scope={runScope} setScope={setRunScope} singleId={runSingleId} setSingleId={setRunSingleId} delay={runDelay} setDelay={setRunDelay} />}
         {tab === "Providers" && <Providers selected={selected} toggle={toggleProvider} setTab={setTab}/>}
         {tab === "Evidence" && <Evidence events={events} notify={setNotice}/>}
         {tab === "Configuration" && <Configuration keys={keys} setKey={setKey} clearKey={clearKey} clearAllKeys={clearAllKeys}/>}
@@ -415,7 +455,7 @@ function Campaign(props: {
   cases: LabCase[] | null; casesError: string | null; geminiKey: string;
   onGoToConfig: () => void; run: RunState;
   onStart: (config: { model: string; scope: Scope; singleId: string; delay: number }) => void;
-  onStop: () => void; onDownload: () => void;
+  onStop: () => void; onDownload: () => void; onDownloadCsv: () => void; onShare: () => void;
   model: string; setModel: (m: string) => void;
   scope: Scope; setScope: (s: Scope) => void;
   singleId: string; setSingleId: (id: string) => void;
@@ -502,7 +542,7 @@ function Campaign(props: {
             <td>{r.response ? r.response.slice(0, 200) : (r.error ? `error: ${r.error.message}`.slice(0, 200) : "")}</td>
           </tr>)}</tbody>
         </table></div>}
-        {run.report && <button className="subtle-btn" onClick={props.onDownload}><Download size={13}/> DOWNLOAD REPORT (JSON)</button>}
+        {run.report && <div className="results-actions" style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}><button className="subtle-btn" onClick={props.onDownload}><Download size={13}/> DOWNLOAD JSON</button><button className="subtle-btn" onClick={props.onDownloadCsv}><Download size={13}/> DOWNLOAD CSV</button><button className="subtle-btn" onClick={props.onShare}>SHARE SUMMARY</button></div>}
       </div>
     </div>
     <div className="campaign-side">
