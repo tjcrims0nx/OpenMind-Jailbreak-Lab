@@ -69,8 +69,7 @@ def main() -> int:
     if args.repo:
         repo = Path(args.repo)
     else:
-        candidate = here.parents[1]
-        repo = candidate if (candidate / "modules" / "guardrail_lab").is_dir() else Path.home() / "workspace" / "openmind-jailbreak-lab-git"
+        repo = here.parents[2]
     cases_path = Path(args.cases) if args.cases else here.parents[1] / "public" / "cases.json"
 
     if not cases_path.is_file():
