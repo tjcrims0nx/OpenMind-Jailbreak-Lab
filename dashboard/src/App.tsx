@@ -35,7 +35,9 @@ const initialEvents = [
 
 interface EventItem { time: string; title: string; detail: string; type: string; live?: boolean; }
 interface LogLine { time: string; text: string; kind: "info" | "ok" | "warn" | "fail" | "bad"; }
+type ReviewDecision = "" | "boundary_held" | "confirmed_failure" | "needs_review";
 interface RunState {
+  reviews: Record<string, ReviewDecision>;
   running: boolean;
   results: RunRecord[];
   log: LogLine[];
@@ -110,7 +112,7 @@ export default function App() {
   // mid-run does not kill the run — the progress window keeps updating
   // in the runner view and the status strip shows live progress.
   const [run, setRun] = useState<RunState>({
-    running: false, results: [], log: [{ time: nowTime(), text: "Log ready — run a campaign to see progress here.", kind: "info" }],
+    running: false, reviews: {}, results: [], log: [{ time: nowTime(), text: "Log ready — run a campaign to see progress here.", kind: "info" }],
     status: "", report: null, done: 0, total: 0, stopped: false,
   });
   const runAbort = useRef<AbortController | null>(null);
@@ -222,7 +224,7 @@ export default function App() {
     setStopping(false);
     const stamp = nowTime();
     setRun(prev => ({
-      ...prev, running: true, results: [], report: null, done: 0,
+      ...prev, running: true, reviews: {}, results: [], report: null, done: 0,
       total: selected.length, stopped: false,
       status: `Running ${selected[0]?.case_id ?? ""} (1 of ${selected.length})…`,
       log: [...prev.log.slice(-999), { time: stamp, text: `Run started — ${selected.length} cases · model ${config.model} · delay ${config.delay}s`, kind: "info" as const }],
@@ -409,7 +411,7 @@ export default function App() {
         <div className="status-strip"><div className="status-left"><span className="live-dot"/><b>{stripLabel}</b><span className="status-sep">/</span><span>{notice}</span></div><div className="status-right"><span>UTC {new Date().toLocaleTimeString("en-GB",{hour12:false,timeZone:"UTC"})}</span><span className="status-sep">·</span><span>BUILD 0.8.0</span></div></div>
 
         {tab === "Overview" && <Overview setTab={setTab} events={events} run={run}/>}
-        {tab === "Campaign runner" && <Campaign cases={cases} casesError={casesError} geminiKey={geminiKey} onGoToConfig={() => setTab("Configuration")} run={run} onStart={startRun} onStop={stopRun} stopping={stopping} onDownload={downloadReport} onDownloadCsv={downloadCsv} onShare={shareResults} model={runModel} setModel={setRunModel} scope={runScope} setScope={setRunScope} singleId={runSingleId} setSingleId={setRunSingleId} delay={runDelay} setDelay={setRunDelay} />}
+        {tab === "Campaign runner" && <Campaign cases={cases} casesError={casesError} geminiKey={geminiKey} onGoToConfig={() => setTab("Configuration")} run={run} onReview={(id, decision) => setRun(prev => ({...prev, reviews: {...prev.reviews, [id]: decision}}))} onStart={startRun} onStop={stopRun} stopping={stopping} onDownload={downloadReport} onDownloadCsv={downloadCsv} onShare={shareResults} model={runModel} setModel={setRunModel} scope={runScope} setScope={setRunScope} singleId={runSingleId} setSingleId={setRunSingleId} delay={runDelay} setDelay={setRunDelay} />}
         {tab === "Providers" && <Providers selected={selected} toggle={toggleProvider} setTab={setTab}/>}
         {tab === "Evidence" && <Evidence events={events} notify={setNotice}/>}
         {tab === "Configuration" && <Configuration keys={keys} setKey={setKey} clearKey={clearKey} clearAllKeys={clearAllKeys}/>}
@@ -481,6 +483,7 @@ function Campaign(props: {
   cases: LabCase[] | null; casesError: string | null; geminiKey: string;
   onGoToConfig: () => void; run: RunState;
   onStart: (config: { model: string; scope: Scope; singleId: string; delay: number }) => void;
+  onReview: (id: string, decision: ReviewDecision) => void;
   onStop: () => void; stopping: boolean; onDownload: () => void; onDownloadCsv: () => void; onShare: () => void;
   model: string; setModel: (m: string) => void;
   scope: Scope; setScope: (s: Scope) => void;
@@ -502,7 +505,7 @@ function Campaign(props: {
   const [delayDraft, setDelayDraft] = useState(String(delay));
   useEffect(() => { setDelayDraft(String(delay)); }, [delay]);
   const buckets = useMemo(() => summaryBuckets(run.results), [run.results]);
-  const [adjudications, setAdjudications] = useState<Record<string, "boundary_held" | "confirmed_failure" | "needs_review">>({});
+  const adjudications = run.reviews;
   const unresolved = run.results.filter(r => r.assessment === "manual_review" || r.assessment === "ambiguous_canary_mention");
   const reviewedCount = unresolved.filter(r => adjudications[r.case_id]).length;
   function exportAdjudications() {
@@ -537,7 +540,7 @@ function Campaign(props: {
     if (el) el.scrollTop = el.scrollHeight;
   }, [run.log]);
   useEffect(() => {
-    if (run.running) progressRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+    if (run.running) progressRef.current?.scrollIntoView?.({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth", block: "nearest" });
   }, [run.running]);
 
   const canRun = Boolean(props.cases && props.geminiKey && !run.running && model.trim() !== "");
@@ -615,7 +618,7 @@ function Campaign(props: {
           {unresolved.map(r => <div className="review-case" key={r.case_id} style={{padding:"12px 0",borderBottom:"1px solid var(--border, #333)"}}>
             <div className="review-case-header"><b>{r.case_id}</b><span className="tag tag-muted">{r.assessment.replace(/_/g, " ")}</span></div>
             <pre className="review-response">{r.response || r.error?.message || "No response"}</pre>
-            <label style={{display:"block",marginTop:8}}>Reviewer decision: <select className="review-select" aria-label={`Review ${r.case_id}`} value={adjudications[r.case_id] || ""} onChange={e=>setAdjudications(prev=>({...prev,[r.case_id]:e.target.value as "boundary_held"|"confirmed_failure"|"needs_review"}))}>
+            <label style={{display:"block",marginTop:8}}>Reviewer decision: <select className="review-select" aria-label={`Review ${r.case_id}`} value={adjudications[r.case_id] || ""} onChange={e=>props.onReview(r.case_id, e.target.value as ReviewDecision)}>
               <option value="">Not reviewed</option><option value="boundary_held">Boundary held (reviewed)</option><option value="confirmed_failure">Confirmed failure</option><option value="needs_review">Needs further review</option>
             </select></label>
           </div>)}
