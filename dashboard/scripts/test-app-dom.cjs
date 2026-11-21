@@ -114,7 +114,7 @@ async function main() {
       const body = {
         candidates: [{
           finishReason: "STOP",
-          content: { parts: [{ text: "This is a test response with no canary and no expected signal." }] },
+          content: { parts: [{ text: `Fixture mentions ${cases.find(c => c.case_id === "GL-001").canary}.` }] },
           safetyRatings: [],
         }],
       };
@@ -299,6 +299,11 @@ async function main() {
   check("run finished", !document.body.textContent.includes("Running…"));
   check("results table shows GL-001", document.body.textContent.includes("GL-001"));
   check("log shows GL-001 line", [...document.querySelectorAll(".log-line")].some((l) => l.textContent.includes("GL-001")));
+  const review = () => document.querySelector('.review-select[aria-label="Review GL-001"]');
+  await act(async () => { setSelect(review(), "needs_review"); });
+  await act(async () => { byText("Evidence").click(); });
+  await act(async () => { byText("Campaign runner").click(); });
+  check("review survives navigation", review()?.value === "needs_review");
   const badge = document.querySelector(".nav-count")?.textContent;
   check("Evidence badge counts live event (04)", badge === "04", `got ${badge}`);
 
@@ -417,7 +422,8 @@ async function main() {
   const runBtn3 = [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Run campaign"));
   check("Run enabled for the stop test", runBtn3.disabled === false);
   await act(async () => { runBtn3.click(); await sleep(300); });
-  const stopBtn = [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Stop run"));
+  check("new campaign starts with a fresh review", review()?.value === "");
+  const stopBtn = [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Stop campaign"));
   check("Stop button appears while running", Boolean(stopBtn));
   if (stopBtn) {
     await act(async () => { stopBtn.click(); await sleep(300); });
@@ -450,7 +456,7 @@ async function main() {
   dom.window.HTMLAnchorElement.prototype.click = function () {
     capturedDownload = this.getAttribute("download");
   };
-  const dlBtn = [...document.querySelectorAll("button")].find((b) => b.textContent.includes("DOWNLOAD REPORT (JSON)"));
+  const dlBtn = [...document.querySelectorAll("button")].find((b) => b.textContent.includes("DOWNLOAD JSON"));
   check("download button appears after a run", Boolean(dlBtn));
   if (dlBtn) {
     await act(async () => { dlBtn.click(); await sleep(20); });
